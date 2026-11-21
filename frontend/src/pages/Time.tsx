@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, type Project, type TimeEntry, useAction, useLoad } from "../api.ts";
 import { ProjectOptions } from "../components/ProjectOptions.tsx";
 import { Dialog, ErrorNote, Field, PageHeader } from "../components/ui.tsx";
+import { CURRENCIES } from "../lib/money.ts";
 import {
   addDays,
   durationToInput,
@@ -19,6 +20,8 @@ export default function Time() {
   const { version, bump } = useRefresh();
   const [days, setDays] = useState(PAGE_DAYS);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState("");
   const from = addDays(isoDate(), -days);
   const entries = useLoad(() => api<TimeEntry[]>(`/time?date_from=${from}&limit=5000`), [version, from]);
   const projects = useLoad(() => api<Project[]>("/projects"), [version]);
@@ -28,10 +31,18 @@ export default function Time() {
   return (
     <>
       <PageHeader title="Time">
+        <button type="button" className="btn" onClick={() => setImporting(true)}>
+          Import from Toggl
+        </button>
         <a className="btn" href="/api/export/time.csv" download>
           Export CSV
         </a>
       </PageHeader>
+      {imported && (
+        <p className="muted" role="status">
+          {imported}
+        </p>
+      )}
 
       {projects.data && active.length === 0 ? (
         <p className="empty">
@@ -95,6 +106,19 @@ export default function Time() {
             Show {PAGE_DAYS} more days
           </button>
         </p>
+      )}
+
+      {importing && (
+        <Dialog title="Import from Toggl Track" onClose={() => setImporting(false)}>
+          <ImportForm
+            onCancel={() => setImporting(false)}
+            onImported={(message) => {
+              setImporting(false);
+              setImported(message);
+              bump();
+            }}
+          />
+        </Dialog>
       )}
 
       {editing && (
@@ -203,6 +227,118 @@ function EntryForm(props: {
         )}
       </div>
       <ErrorNote message={error} />
+    </form>
+  );
+}
+
+type ImportResult = {
+  added: number;
+  minutes: number;
+  skipped_duplicates: number;
+  new_clients: string[];
+  new_projects: string[];
+};
+
+/** Pick a Toggl CSV, see what it would add (a dry run), then import it. */
+function ImportForm(props: { onCancel: () => void; onImported: (message: string) => void }) {
+  const [csv, setCsv] = useState("");
+  const [currency, setCurrency] = useState("TRY");
+  const [preview, setPreview] = useState<ImportResult | null>(null);
+  const { busy, error, setError, run } = useAction();
+
+  function check(text: string, newCurrency: string) {
+    setPreview(null);
+    run(async () =>
+      setPreview(
+        await api<ImportResult>("/import/toggl", {
+          method: "POST",
+          body: { csv: text, currency: newCurrency, dry_run: true },
+        }),
+      ),
+    );
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    run(async () => {
+      const r = await api<ImportResult>("/import/toggl", {
+        method: "POST",
+        body: { csv, currency },
+      });
+      props.onImported(
+        `Imported ${r.added} ${r.added === 1 ? "entry" : "entries"} (${formatDuration(r.minutes)}).` +
+          (r.skipped_duplicates ? ` Skipped ${r.skipped_duplicates} already here.` : ""),
+      );
+    });
+  }
+
+  return (
+    <form onSubmit={submit} className="stack">
+      <p className="muted">
+        In Toggl Track, open Reports, Detailed, and export it as CSV. Clients and projects are
+        matched by name; entries already here are skipped.
+      </p>
+      <Field label="Toggl CSV file">
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          required
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            if (file.size > 5_000_000) {
+              setPreview(null);
+              setError("That file is over 5 MB. Export a shorter date range.");
+              return;
+            }
+            const text = await file.text();
+            setCsv(text);
+            check(text, currency);
+          }}
+        />
+      </Field>
+      <Field label="Currency for new clients">
+        <select
+          value={currency}
+          onChange={(e) => {
+            setCurrency(e.target.value);
+            if (csv) check(csv, e.target.value);
+          }}
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+      </Field>
+      {preview && (
+        <div role="status">
+          <p>
+            {preview.added === 0
+              ? "Nothing new to import."
+              : `${preview.added} ${preview.added === 1 ? "entry" : "entries"}, ${formatDuration(preview.minutes)} in total.`}
+            {preview.skipped_duplicates > 0 &&
+              ` ${preview.skipped_duplicates} already here will be skipped.`}
+          </p>
+          {preview.new_clients.length > 0 && (
+            <p>New clients: {preview.new_clients.join(", ")}.</p>
+          )}
+          {preview.new_projects.length > 0 && (
+            <p>
+              New projects, with an hourly rate of 0 until you set one under Clients:{" "}
+              {preview.new_projects.join(", ")}.
+            </p>
+          )}
+        </div>
+      )}
+      <ErrorNote message={error} />
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={busy || !preview?.added}>
+          Import
+        </button>
+        <button type="button" className="btn" onClick={props.onCancel}>
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }
