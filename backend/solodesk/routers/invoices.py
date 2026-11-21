@@ -245,15 +245,21 @@ def add_time(invoice_id: int, body: AddTimeIn, db: Session = Depends(get_db)) ->
             lines.append(line)
             db.add(line)
             continue
-        old.quantity_hundredths += line.quantity_hundredths
         dates = db.exec(
-            select(TimeEntry.id, TimeEntry.date)
+            select(TimeEntry.id, TimeEntry.date, TimeEntry.minutes)
             .where(TimeEntry.invoice_id == invoice_id, TimeEntry.project_id == line.project_id)
             .order_by(TimeEntry.date)
         ).all()
-        before = [d for id_, d in dates if id_ not in body.time_entry_ids]
+        new_ids = set(body.time_entry_ids)
+        before = [(d, m) for id_, d, m in dates if id_ not in new_ids]
+        # Round the line's total minutes once, as a new draft would; summing two rounded
+        # quantities could bill more. A quantity edited by hand only gets the new hours added.
+        if old.quantity_hundredths == minutes_to_hundredths(sum(m for _, m in before)):
+            old.quantity_hundredths = max(minutes_to_hundredths(sum(m for *_, m in dates)), 1)
+        else:
+            old.quantity_hundredths += line.quantity_hundredths
         name = db.get(Project, line.project_id).name
-        if before and old.description == f"{name}: {_span(before[0], before[-1])}":
+        if before and old.description == f"{name}: {_span(before[0][0], before[-1][0])}":
             old.description = f"{name}: {_span(dates[0][1], dates[-1][1])}"
     if len(lines) > MAX_LINES:
         raise HTTPException(422, f"An invoice can have at most {MAX_LINES} lines.")
