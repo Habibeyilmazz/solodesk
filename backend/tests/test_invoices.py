@@ -410,6 +410,26 @@ def test_adding_time_to_a_draft(api, acme):
     assert len(api.get("/api/time", params={"unbilled": True}).json()) == 3
 
 
+def test_adding_time_rounds_the_line_total_once(api, acme):
+    cid, pid = acme["client"]["id"], acme["project"]["id"]
+    first = log_time(api, pid, 1)  # 1 min is 0.02 h, 2 min is 0.03 h
+    invoice = make_invoice(api, cid, time_entry_ids=[first["id"]], lines=[])
+    second = log_time(api, pid, 1)
+    r = api.post(f"/api/invoices/{invoice['id']}/time", json={"time_entry_ids": [second["id"]]})
+    assert r.json()["lines"][0]["quantity_hundredths"] == 3  # as if billed together, not 0.04
+
+
+def test_a_project_named_on_an_invoice_cannot_be_deleted(api, acme):
+    pid = acme["project"]["id"]
+    entry = log_time(api, pid, 60)
+    invoice = make_invoice(api, acme["client"]["id"], time_entry_ids=[entry["id"]])
+    mark(api, invoice["id"], "sent")
+    mark(api, invoice["id"], "void")  # releases the entry, so it can be deleted
+    assert api.delete(f"/api/time/{entry['id']}").status_code == 204
+    r = api.delete(f"/api/projects/{pid}")
+    assert r.status_code == 409 and "invoice" in r.json()["detail"]
+
+
 def test_adding_time_is_for_drafts_and_unbilled_entries_only(api, acme):
     cid, pid = acme["client"]["id"], acme["project"]["id"]
     entry = log_time(api, pid, 60)

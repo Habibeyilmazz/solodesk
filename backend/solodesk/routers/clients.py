@@ -2,7 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, func, select
 
 from ..deps import get_db, get_or_404
-from ..models import Client, ClientIn, Invoice, Project, ProjectIn, ProjectUpdate, TimeEntry
+from ..models import (
+    Client,
+    ClientIn,
+    Invoice,
+    InvoiceLine,
+    Project,
+    ProjectIn,
+    ProjectUpdate,
+    TimeEntry,
+)
 
 router = APIRouter(prefix="/api", tags=["clients and projects"])
 
@@ -101,5 +110,7 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     project = get_or_404(db, Project, project_id)
     if db.exec(select(TimeEntry.id).where(TimeEntry.project_id == project_id).limit(1)).first():
         raise HTTPException(409, "This project has tracked time. Archive it instead.")
+    if db.exec(select(InvoiceLine.id).where(InvoiceLine.project_id == project_id).limit(1)).first():
+        raise HTTPException(409, "This project is on an invoice. Archive it instead.")
     db.delete(project)
     db.commit()
