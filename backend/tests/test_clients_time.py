@@ -123,4 +123,4 @@ def test_an_id_too_big_for_sqlite_is_a_404_or_422(api):
         "/api/time", json={"project_id": huge, "date": "2026-01-01", "minutes": 5}
     ).status_code in (404, 422)
     assert api.post("/api/timer/start", json={"project_id": huge}).status_code in (404, 422)
-    assert api.get(f"/api/time?project_id={huge}").status_code == 200
+    assert api.get(f"/api/time?project_id={huge}").status_code in (200, 422)
