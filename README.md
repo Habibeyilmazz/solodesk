@@ -62,6 +62,13 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
 - **Dashboard.** Revenue per month for the last 12 months, unpaid and overdue totals with the
   invoices to chase, hours this week, and top clients. Shown per currency; nothing is converted.
 - **CSV export** of invoices and time entries.
+- **Import from Toggl Track.** On the Time page, pick a Toggl detailed report (Reports,
+  Detailed, export as CSV). You see what it would add before anything is saved: entries and
+  hours, and which clients and projects it would create. Names are matched ignoring case;
+  new projects start at an hourly rate of 0. Entries already in solodesk (same project, date,
+  minutes and description) are skipped, so importing an overlapping range twice is safe.
+  One unreadable row and nothing is imported; the message names the row. Durations are
+  rounded to whole minutes, and an entry is dated on the day it started.
 - **Single-user sign-in** with a password from the environment.
 - **Light and dark** follow your system setting. On a phone, the invoice list, time log and
   line editor turn into stacked rows instead of scrolling sideways.

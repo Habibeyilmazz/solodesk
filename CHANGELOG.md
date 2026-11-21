@@ -6,6 +6,21 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added (round 7, feature lens)
+
+- Import time from a Toggl Track detailed report (CSV). **Import from Toggl** on the Time page
+  shows a preview first (a dry run: entries, hours, clients and projects it would create),
+  then imports. Clients and projects are matched by name ignoring case and created when
+  missing (new clients get the currency picked in the dialog, new projects a rate of 0).
+  Entries already present with the same project, date, minutes and description are skipped,
+  so re-importing is safe. All or nothing, with row numbers in the error. API:
+  `POST /api/import/toggl` with `{"csv": "...", "currency": "EUR", "dry_run": true}`.
+  Tests in `tests/test_import.py` and `e2e/4-import.spec.ts`.
+- Chosen by using the app: switching from another tracker meant retyping history by hand.
+  Only Toggl's detailed report is read (columns Client, Project, Description, Billable,
+  Start date in YYYY-MM-DD, Duration as HH:MM:SS); Clockify and Harvest exports are not.
+  The parser was written against Toggl's documented column names, not a real account export.
+
 ### Added (round 6, launch lens)
 
 - `docs/demo.gif`, recorded from the real app by `frontend/scripts/demo.mjs` (Playwright plus
