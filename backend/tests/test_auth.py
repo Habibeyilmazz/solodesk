@@ -176,3 +176,9 @@ def test_oversized_bodies_are_refused_before_sign_in(anon):
     assert anon.post("/api/auth/login", content=chunked()).status_code == 413
     # a body under the limit still reaches the endpoint
     assert anon.post("/api/auth/login", json={"password": "wrong-pass"}).status_code == 401
+
+
+def test_api_docs_load_a_pinned_swagger_ui_with_integrity_hashes(anon):
+    html = anon.get("/api/docs").text
+    assert html.count('integrity="sha384-') == 2  # the script and the stylesheet
+    assert "swagger-ui-dist@5/" not in html and "fastapi.tiangolo.com" not in html

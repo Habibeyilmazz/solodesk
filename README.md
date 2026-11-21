@@ -130,6 +130,7 @@ out until it stops. Request bodies over 32 MB are refused (413) before they are 
 in or not.
 
 **API docs.** The OpenAPI schema and Swagger UI are at `/api/docs` on a running instance.
+Swagger UI loads from the jsDelivr CDN, pinned to one version and checked with integrity hashes.
 
 ## Configuration
 

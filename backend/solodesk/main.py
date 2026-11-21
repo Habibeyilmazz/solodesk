@@ -2,7 +2,8 @@
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 
@@ -17,6 +18,13 @@ CSP = (
     "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
     "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 )
+# Swagger UI runs on the app's origin, so it could read the CSRF token and act as you.
+# FastAPI's default loads "swagger-ui-dist@5", whatever 5.x is newest; pin one with hashes.
+SWAGGER = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.34.1/"
+SWAGGER_SRI = {
+    "swagger-ui-bundle.js": "sha384-XFYN47VzPiDY6qPtxYKg0nqUeW/upo20xf1j2SUE7gT/i35FJB4cuS/71Iegzk8Z",  # noqa: E501
+    "swagger-ui.css": "sha384-4c3vsE5f+trhFyHrFrLM1fFGUn531NIaC7dcqEWIJdoRQJ5CkJbSuSCwXLpaS1KF",
+}
 # The largest valid body is a Toggl import: 5,000,000 characters, as UTF-8 and JSON-escaped.
 MAX_BODY_BYTES = 32 * 1024 * 1024
 
@@ -59,7 +67,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         description="Back office for freelancers. All money is in integer minor units "
         "(kuruş, cents, pence); rates are in basis points (2000 = 20%). "
         "Writes need the session cookie and an X-CSRF-Token header.",
-        docs_url="/api/docs",
+        docs_url=None,
         redoc_url=None,
         openapi_url="/api/openapi.json",
     )
@@ -102,6 +110,20 @@ def create_app(config: Config | None = None) -> FastAPI:
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:
         return {"status": "ok", "version": __version__}
+
+    @app.get("/api/docs", include_in_schema=False)
+    def docs() -> HTMLResponse:
+        html = get_swagger_ui_html(
+            openapi_url=app.openapi_url,
+            title="solodesk API",
+            swagger_js_url=SWAGGER + "swagger-ui-bundle.js",
+            swagger_css_url=SWAGGER + "swagger-ui.css",
+            swagger_favicon_url="/favicon.svg",
+        ).body.decode()
+        for name, sri in SWAGGER_SRI.items():
+            url = f'"{SWAGGER}{name}"'
+            html = html.replace(url, f'{url} integrity="{sri}" crossorigin="anonymous"')
+        return HTMLResponse(html)
 
     app.include_router(auth.router)
     for module in (clients, time, invoices, reports, settings, imports):
