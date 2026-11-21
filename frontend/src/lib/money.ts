@@ -5,19 +5,22 @@ export const CURRENCIES = ["TRY", "USD", "EUR", "GBP"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 const SYMBOLS: Record<Currency, string> = { TRY: "₺", USD: "$", EUR: "€", GBP: "£" };
 
-/** n / d rounded half up, for non-negative n. */
-export function roundDiv(n: number, d: number): number {
-  return Math.floor((2 * n + d) / (2 * d));
+/**
+ * a * b / d rounded half up, for non-negative integers. The product can pass 2^53 (a large
+ * subtotal times a rate in basis points), so the arithmetic is done in BigInt.
+ */
+export function mulDiv(a: number, b: number, d: number): number {
+  return Number((2n * BigInt(a) * BigInt(b) + BigInt(d)) / (2n * BigInt(d)));
 }
 
 export function lineAmount(quantityHundredths: number, unitPriceMinor: number): number {
-  return roundDiv(quantityHundredths * unitPriceMinor, 100);
+  return mulDiv(quantityHundredths, unitPriceMinor, 100);
 }
 
 export function totals(amounts: number[], discountBp: number, taxRateBp: number) {
   const subtotal = amounts.reduce((sum, a) => sum + a, 0);
-  const discount = roundDiv(subtotal * discountBp, 10_000);
-  const tax = roundDiv((subtotal - discount) * taxRateBp, 10_000);
+  const discount = mulDiv(subtotal, discountBp, 10_000);
+  const tax = mulDiv(subtotal - discount, taxRateBp, 10_000);
   return { subtotal, discount, tax, total: subtotal - discount + tax };
 }
 

@@ -9,6 +9,10 @@ test("change settings, fix mistakes and undo things", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
+  // Signing in again elsewhere replaces the session and its CSRF token. This tab still holds
+  // the old token; its next write must recover instead of failing.
+  await page.request.post("/api/auth/login", { data: { password: "e2e-password" } });
+
   // settings persist
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByLabel("Business name").fill("Mavi Fener Studio");
@@ -59,8 +63,8 @@ test("change settings, fix mistakes and undo things", async ({ page }) => {
     await add.getByLabel("Project").selectOption({ label: "Retainer" });
     await add.getByLabel("Duration").fill(duration);
     await add.getByLabel("Description").fill(description);
-    await add.getByRole("button", { name: "Add entry" }).click();
-    await expect(page.getByRole("row", { name: new RegExp(description) })).toBeVisible();
+    await add.getByRole("button", { name: "Add entry" }).dblclick(); // must not log it twice
+    await expect(page.getByRole("row", { name: new RegExp(description) })).toHaveCount(1);
   }
   const workshop = page.getByRole("row", { name: /Workshop/ });
   await workshop.getByRole("button", { name: /^Edit/ }).click();

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, type Invoice, useLoad } from "../api.ts";
+import { api, type Invoice, useAction, useLoad } from "../api.ts";
 import { ErrorNote, Field, Stamp } from "../components/ui.tsx";
 import {
   formatMoney,
@@ -48,20 +48,17 @@ function BackLink() {
 function IssuedInvoice({ invoice }: { invoice: Invoice }) {
   const { bump } = useRefresh();
   const [paidOn, setPaidOn] = useState(isoDate());
-  const [error, setError] = useState("");
+  const { busy, error, run } = useAction();
   const money = (minor: number) => formatMoney(minor, invoice.currency);
 
-  async function mark(status: "sent" | "paid") {
-    setError("");
-    try {
+  function mark(status: "sent" | "paid") {
+    run(async () => {
       await api(`/invoices/${invoice.id}/status`, {
         method: "POST",
         body: status === "paid" ? { status, paid_on: paidOn } : { status },
       });
       bump();
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    });
   }
 
   return (
@@ -144,7 +141,7 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
           Open PDF
         </a>
         {invoice.status === "paid" ? (
-          <button type="button" className="btn" onClick={() => mark("sent")}>
+          <button type="button" className="btn" onClick={() => mark("sent")} disabled={busy}>
             Mark as unpaid
           </button>
         ) : (
@@ -152,7 +149,7 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
             <Field label="Paid on" className="inline">
               <input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} required />
             </Field>
-            <button type="button" className="btn btn-primary" onClick={() => mark("paid")} disabled={!paidOn}>
+            <button type="button" className="btn btn-primary" onClick={() => mark("paid")} disabled={!paidOn || busy}>
               Mark as paid
             </button>
           </>
@@ -204,7 +201,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   const navigate = useNavigate();
   const [form, setForm] = useState(() => toForm(invoice));
   const [dirty, setDirty] = useState(false);
-  const [error, setError] = useState("");
+  const { busy, error, setError, run } = useAction();
   const money = (minor: number) => formatMoney(minor, invoice.currency);
 
   function change(patch: Partial<Form>) {
@@ -226,7 +223,6 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   const sum = totals(parsed.map((p) => p.amount ?? 0), discountBp ?? 0, taxBp ?? 0);
 
   async function save(): Promise<boolean> {
-    setError("");
     if (parsed.some((p) => p.amount === null) || form.rows.some((r) => !r.description.trim())) {
       setError("Every line needs a description, a quantity above zero and a price, like 2.5 and 1500.00.");
       return false;
@@ -235,7 +231,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       setError("Tax and discount are percentages between 0 and 100.");
       return false;
     }
-    try {
+    return run(async () => {
       const saved = await api<Invoice>(`/invoices/${invoice.id}`, {
         method: "PUT",
         body: {
@@ -255,11 +251,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       setForm(toForm(saved));
       setDirty(false);
       bump();
-      return true;
-    } catch (e) {
-      setError((e as Error).message);
-      return false;
-    }
+    });
   }
 
   async function send() {
@@ -271,23 +263,19 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       return;
     }
     if (!(await save())) return;
-    try {
+    await run(async () => {
       await api(`/invoices/${invoice.id}/status`, { method: "POST", body: { status: "sent" } });
       bump();
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    });
   }
 
   async function remove() {
     if (!confirm("Delete this draft? Its tracked time becomes billable again.")) return;
-    try {
+    await run(async () => {
       await api(`/invoices/${invoice.id}`, { method: "DELETE" });
       bump();
       navigate("/invoices");
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    });
   }
 
   return (
@@ -301,148 +289,151 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
           </div>
           <Stamp status="draft" />
         </header>
-        <div className="sheet-dates">
-          <Field label="Issue date">
-            <input
-              type="date"
-              value={form.issue_date}
-              onChange={(e) => change({ issue_date: e.target.value })}
-              required
-            />
-          </Field>
-          <Field label="Due date">
-            <input
-              type="date"
-              value={form.due_date}
-              min={form.issue_date}
-              onChange={(e) => change({ due_date: e.target.value })}
-              required
-            />
-          </Field>
-        </div>
+        {/* locked while a request is in flight, so edits made meanwhile cannot be lost */}
+        <fieldset disabled={busy}>
+          <div className="sheet-dates">
+            <Field label="Issue date">
+              <input
+                type="date"
+                value={form.issue_date}
+                onChange={(e) => change({ issue_date: e.target.value })}
+                required
+              />
+            </Field>
+            <Field label="Due date">
+              <input
+                type="date"
+                value={form.due_date}
+                min={form.issue_date}
+                onChange={(e) => change({ due_date: e.target.value })}
+                required
+              />
+            </Field>
+          </div>
 
-        <table className="ledger lines editing">
-          <thead>
-            <tr>
-              <th scope="col">Description</th>
-              <th scope="col" className="num">Qty</th>
-              <th scope="col" className="num">Unit price</th>
-              <th scope="col" className="num">Amount</th>
-              <th scope="col">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {form.rows.map((row, i) => (
-              <tr key={row.key}>
-                <td>
-                  <input
-                    aria-label={`Line ${i + 1} description`}
-                    value={row.description}
-                    maxLength={500}
-                    onChange={(e) => changeRow(row.key, { description: e.target.value })}
-                  />
-                </td>
-                <td className="num">
-                  <input
-                    aria-label={`Line ${i + 1} quantity`}
-                    className="num"
-                    inputMode="decimal"
-                    value={row.quantity}
-                    onChange={(e) => changeRow(row.key, { quantity: e.target.value })}
-                  />
-                </td>
-                <td className="num">
-                  <input
-                    aria-label={`Line ${i + 1} unit price`}
-                    className="num"
-                    inputMode="decimal"
-                    value={row.price}
-                    onChange={(e) => changeRow(row.key, { price: e.target.value })}
-                  />
-                </td>
-                <td className="num">{parsed[i].amount === null ? "?" : money(parsed[i].amount!)}</td>
-                <td className="row-actions">
-                  <button
-                    type="button"
-                    className="link"
-                    onClick={() => change({ rows: form.rows.filter((r) => r.key !== row.key) })}
-                  >
-                    Remove<span className="sr-only"> line {i + 1}</span>
-                  </button>
-                </td>
+          <table className="ledger lines editing">
+            <thead>
+              <tr>
+                <th scope="col">Description</th>
+                <th scope="col" className="num">Qty</th>
+                <th scope="col" className="num">Unit price</th>
+                <th scope="col" className="num">Amount</th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <p>
-          <button
-            type="button"
-            className="btn"
-            onClick={() =>
-              change({
-                rows: [...form.rows, { key: nextKey++, description: "", quantity: "1", price: "" }],
-              })
-            }
-          >
-            Add line
-          </button>
-        </p>
+            </thead>
+            <tbody>
+              {form.rows.map((row, i) => (
+                <tr key={row.key}>
+                  <td>
+                    <input
+                      aria-label={`Line ${i + 1} description`}
+                      value={row.description}
+                      maxLength={500}
+                      onChange={(e) => changeRow(row.key, { description: e.target.value })}
+                    />
+                  </td>
+                  <td className="num">
+                    <input
+                      aria-label={`Line ${i + 1} quantity`}
+                      className="num"
+                      inputMode="decimal"
+                      value={row.quantity}
+                      onChange={(e) => changeRow(row.key, { quantity: e.target.value })}
+                    />
+                  </td>
+                  <td className="num">
+                    <input
+                      aria-label={`Line ${i + 1} unit price`}
+                      className="num"
+                      inputMode="decimal"
+                      value={row.price}
+                      onChange={(e) => changeRow(row.key, { price: e.target.value })}
+                    />
+                  </td>
+                  <td className="num">{parsed[i].amount === null ? "?" : money(parsed[i].amount!)}</td>
+                  <td className="row-actions">
+                    <button
+                      type="button"
+                      className="link"
+                      onClick={() => change({ rows: form.rows.filter((r) => r.key !== row.key) })}
+                    >
+                      Remove<span className="sr-only"> line {i + 1}</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p>
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                change({
+                  rows: [...form.rows, { key: nextKey++, description: "", quantity: "1", price: "" }],
+                })
+              }
+            >
+              Add line
+            </button>
+          </p>
 
-        <dl className="totals">
-          <div>
-            <dt>Subtotal</dt>
-            <dd>{money(sum.subtotal)}</dd>
-          </div>
-          <div>
-            <dt>
-              <label htmlFor="discount">Discount %</label>
-              <input
-                id="discount"
-                className="num pct"
-                inputMode="decimal"
-                value={form.discount}
-                onChange={(e) => change({ discount: e.target.value })}
-              />
-            </dt>
-            <dd>{sum.discount > 0 ? "-" : ""}{money(sum.discount)}</dd>
-          </div>
-          <div>
-            <dt>
-              <label htmlFor="tax">Tax %</label>
-              <input
-                id="tax"
-                className="num pct"
-                inputMode="decimal"
-                value={form.tax}
-                onChange={(e) => change({ tax: e.target.value })}
-              />
-            </dt>
-            <dd>{money(sum.tax)}</dd>
-          </div>
-          <div className="grand">
-            <dt>Total</dt>
-            <dd>{money(sum.total)}</dd>
-          </div>
-        </dl>
+          <dl className="totals">
+            <div>
+              <dt>Subtotal</dt>
+              <dd>{money(sum.subtotal)}</dd>
+            </div>
+            <div>
+              <dt>
+                <label htmlFor="discount">Discount %</label>
+                <input
+                  id="discount"
+                  className="num pct"
+                  inputMode="decimal"
+                  value={form.discount}
+                  onChange={(e) => change({ discount: e.target.value })}
+                />
+              </dt>
+              <dd>{sum.discount > 0 ? "-" : ""}{money(sum.discount)}</dd>
+            </div>
+            <div>
+              <dt>
+                <label htmlFor="tax">Tax %</label>
+                <input
+                  id="tax"
+                  className="num pct"
+                  inputMode="decimal"
+                  value={form.tax}
+                  onChange={(e) => change({ tax: e.target.value })}
+                />
+              </dt>
+              <dd>{money(sum.tax)}</dd>
+            </div>
+            <div className="grand">
+              <dt>Total</dt>
+              <dd>{money(sum.total)}</dd>
+            </div>
+          </dl>
 
-        <Field label="Notes on the invoice">
-          <textarea
-            rows={2}
-            maxLength={2000}
-            value={form.notes}
-            onChange={(e) => change({ notes: e.target.value })}
-          />
-        </Field>
+          <Field label="Notes on the invoice">
+            <textarea
+              rows={2}
+              maxLength={2000}
+              value={form.notes}
+              onChange={(e) => change({ notes: e.target.value })}
+            />
+          </Field>
+        </fieldset>
       </article>
 
       <ErrorNote message={error} />
       <div className="sheet-actions">
-        <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty}>
+        <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty || busy}>
           {dirty ? "Save draft" : "Saved"}
         </button>
-        <button type="button" className="btn" onClick={send}>
+        <button type="button" className="btn" onClick={send} disabled={busy}>
           Mark as sent
         </button>
         {dirty ? (
@@ -452,7 +443,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
             Preview PDF
           </a>
         )}
-        <button type="button" className="btn btn-danger" onClick={remove}>
+        <button type="button" className="btn btn-danger" onClick={remove} disabled={busy}>
           Delete draft
         </button>
       </div>

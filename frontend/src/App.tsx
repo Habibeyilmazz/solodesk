@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { api, setCsrfToken, setSignedOutHandler } from "./api.ts";
+import { api, ApiError, setCsrfToken, setSignedOutHandler } from "./api.ts";
 import { TimerBar } from "./components/TimerBar.tsx";
 import { RefreshContext } from "./refresh.ts";
 import Clients from "./pages/Clients.tsx";
@@ -47,8 +47,13 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
   const refresh = useMemo(() => ({ version, bump: () => setVersion((v) => v + 1) }), [version]);
 
   async function signOut() {
-    await api("/auth/logout", { method: "POST" }).catch(() => {});
-    onSignedOut();
+    try {
+      await api("/auth/logout", { method: "POST" });
+      onSignedOut();
+    } catch (e) {
+      // a 401 means the session is already gone, and the app has switched to the sign-in page
+      if ((e as ApiError).status !== 401) alert(`You are still signed in. ${(e as Error).message}`);
+    }
   }
 
   return (

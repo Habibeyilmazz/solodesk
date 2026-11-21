@@ -4,16 +4,27 @@ import {
   formatMoney,
   hundredthsToInput,
   lineAmount,
+  mulDiv,
   parseHundredths,
-  roundDiv,
   totals,
   trimHundredths,
 } from "./money.ts";
 
-test("roundDiv rounds half up", () => {
-  assert.equal(roundDiv(5, 10), 1);
-  assert.equal(roundDiv(4, 10), 0);
-  assert.equal(roundDiv(15, 10), 2);
+test("mulDiv rounds half up", () => {
+  assert.equal(mulDiv(5, 1, 10), 1);
+  assert.equal(mulDiv(4, 1, 10), 0);
+  assert.equal(mulDiv(3, 5, 10), 2);
+});
+
+test("the largest invoice the API accepts is still exact", () => {
+  const line = lineAmount(10 ** 6, 10 ** 9); // the API's upper bounds
+  assert.equal(line, 10 ** 13);
+  const sum = totals(Array(200).fill(line), 0, 10_000);
+  assert.equal(sum.total, 4 * 10 ** 15); // same figure as backend/tests/test_invoices.py
+  // 2e15 * 3333 passes 2^53, where plain Number multiplication starts dropping units
+  assert.equal(totals(Array(200).fill(line), 3333, 0).discount, 666_600_000_000_000);
+  assert.equal(mulDiv(2 * 10 ** 15 + 1, 3333, 10_000), 666_600_000_000_000);
+  assert.equal(mulDiv(2 * 10 ** 15 + 2, 3333, 10_000), 666_600_000_000_001);
 });
 
 test("line amounts and totals match the backend", () => {

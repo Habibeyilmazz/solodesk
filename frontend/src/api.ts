@@ -1,5 +1,5 @@
 // Thin wrapper over fetch: sends the CSRF token on writes and turns API errors into messages.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Client = {
   id: number;
@@ -136,24 +136,36 @@ function describe(detail: unknown, status: number): string {
   return `Request failed (${status})`;
 }
 
+async function request(path: string, method: string, body: unknown): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (method !== "GET") headers["X-CSRF-Token"] = csrfToken;
+  try {
+    return await fetch(`/api${path}`, {
+      method,
+      headers,
+      credentials: "same-origin",
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, "Cannot reach the solodesk server. Is it still running?");
+  }
+}
+
 export async function api<T = unknown>(
   path: string,
   options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {},
 ): Promise<T> {
   const method = options.method ?? "GET";
-  const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  if (method !== "GET") headers["X-CSRF-Token"] = csrfToken;
-  let response: Response;
-  try {
-    response = await fetch(`/api${path}`, {
-      method,
-      headers,
-      credentials: "same-origin",
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    });
-  } catch {
-    throw new ApiError(0, "Cannot reach the solodesk server. Is it still running?");
+  let response = await request(path, method, options.body);
+  if (response.status === 403 && method !== "GET") {
+    // Signing in again in another tab replaces the session, which leaves this tab holding a
+    // stale CSRF token. Pick up the current one and try once more.
+    const session = await (await request("/auth/session", "GET", undefined)).json().catch(() => null);
+    if (session?.csrf_token) {
+      csrfToken = session.csrf_token;
+      response = await request(path, method, options.body);
+    }
   }
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => null);
@@ -162,6 +174,34 @@ export async function api<T = unknown>(
     throw new ApiError(response.status, describe(data?.detail, response.status));
   }
   return data as T;
+}
+
+/**
+ * For forms and buttons that change something. Runs one request at a time: `busy` disables
+ * the controls, so a double click cannot submit twice, and `error` is the message to show.
+ * `run` resolves to whether the request succeeded.
+ */
+export function useAction() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const inFlight = useRef(false); // state alone would miss two clicks in the same frame
+  async function run(action: () => Promise<unknown>): Promise<boolean> {
+    if (inFlight.current) return false;
+    inFlight.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+  return { busy, error, setError, run };
 }
 
 /** Load data for a page. `reload` refetches; `error` is a message ready to show. */

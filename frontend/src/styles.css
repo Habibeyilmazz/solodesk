@@ -328,6 +328,12 @@ textarea {
   min-width: 0;
 }
 
+/* date inputs and selects are otherwise a few pixels taller than text inputs */
+input,
+select {
+  height: 2.5rem;
+}
+
 input[type="checkbox"] {
   width: 1.05rem;
   height: 1.05rem;
@@ -337,6 +343,13 @@ input[type="checkbox"] {
 
 textarea {
   resize: vertical;
+}
+
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 .field {
@@ -999,6 +1012,7 @@ input.num {
 
 .totals input.pct {
   width: 4.5rem;
+  height: 2.1rem;
   padding: 0.25rem 0.5rem;
 }
 

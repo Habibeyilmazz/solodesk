@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { api, type Settings, useLoad } from "../api.ts";
+import { api, type Settings, useAction, useLoad } from "../api.ts";
 import { ErrorNote, Field, PageHeader } from "../components/ui.tsx";
 import { parseHundredths, trimHundredths } from "../lib/money.ts";
 
@@ -26,23 +26,22 @@ function SettingsForm({ settings }: { settings: Settings }) {
     payment_terms_days: String(settings.payment_terms_days),
     invoice_footer: settings.invoice_footer,
   });
-  const [error, setError] = useState("");
+  const { busy, error, setError, run } = useAction();
   const [saved, setSaved] = useState(false);
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => {
     setForm({ ...form, [key]: e.target.value });
     setSaved(false);
   };
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault();
-    setError("");
     const default_tax_rate_bp = parseHundredths(form.tax || "0");
     if (default_tax_rate_bp === null || default_tax_rate_bp > 10_000) {
       setError("Default tax is a percentage between 0 and 100.");
       return;
     }
     const { tax: _tax, ...rest } = form;
-    try {
+    run(async () => {
       await api("/settings", {
         method: "PUT",
         body: {
@@ -53,9 +52,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
         },
       });
       setSaved(true);
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    });
   }
 
   return (
@@ -117,7 +114,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
 
       <ErrorNote message={error} />
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={busy}>
           Save settings
         </button>
         {saved && (

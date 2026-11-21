@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Project, type TimeEntry, useLoad } from "../api.ts";
+import { api, type Project, type TimeEntry, useAction, useLoad } from "../api.ts";
 import { formatClock } from "../lib/time.ts";
 import { useRefresh } from "../refresh.ts";
 import { ProjectOptions } from "./ProjectOptions.tsx";
@@ -14,7 +14,7 @@ export function TimerBar() {
   const timer = useLoad(() => api<TimeEntry | null>("/timer"), [version]);
   const [chosen, setChosen] = useState(() => localStorage.getItem(LAST_PROJECT) ?? "");
   const [description, setDescription] = useState("");
-  const [error, setError] = useState("");
+  const { busy, error, run } = useAction();
   const [now, setNow] = useState(() => Date.now());
 
   const running = timer.data;
@@ -29,25 +29,24 @@ export function TimerBar() {
   const active = (projects.data ?? []).filter((p) => !p.archived);
   const projectId = active.some((p) => String(p.id) === chosen) ? chosen : String(active[0]?.id ?? "");
 
-  async function act(request: Promise<unknown>) {
-    setError("");
-    try {
-      await request;
-      bump();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-
   function start(event: FormEvent) {
     event.preventDefault();
     localStorage.setItem(LAST_PROJECT, projectId);
-    act(
-      api("/timer/start", {
+    run(async () => {
+      await api("/timer/start", {
         method: "POST",
         body: { project_id: Number(projectId), description },
-      }).then(() => setDescription("")),
-    );
+      });
+      setDescription("");
+      bump();
+    });
+  }
+
+  function stop() {
+    run(async () => {
+      await api("/timer/stop", { method: "POST" });
+      bump();
+    });
   }
 
   if (running) {
@@ -64,7 +63,7 @@ export function TimerBar() {
             {running.description && `, ${running.description}`}
           </span>
         </span>
-        <button type="button" className="btn btn-stop" onClick={() => act(api("/timer/stop", { method: "POST" }))}>
+        <button type="button" className="btn btn-stop" onClick={stop} disabled={busy}>
           Stop timer
         </button>
         {error && <span className="timer-error" role="alert">{error}</span>}
@@ -95,7 +94,7 @@ export function TimerBar() {
           maxLength={500}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <button type="submit" className="btn btn-primary" disabled={!projectId}>
+        <button type="submit" className="btn btn-primary" disabled={!projectId || busy}>
           Start timer
         </button>
       </form>

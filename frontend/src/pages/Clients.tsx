@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Client, type Project, useLoad } from "../api.ts";
+import { api, type Client, type Project, useAction, useLoad } from "../api.ts";
 import { Dialog, ErrorNote, Field, PageHeader } from "../components/ui.tsx";
 import { CURRENCIES, formatMoney, hundredthsToInput, parseHundredths } from "../lib/money.ts";
 import { formatDuration } from "../lib/time.ts";
@@ -119,18 +119,17 @@ export default function Clients() {
   );
 }
 
+/** useAction for the dialogs here: every successful request closes the dialog and refreshes. */
 function useSubmit(onSaved: () => void) {
-  const [error, setError] = useState("");
-  async function run(request: () => Promise<unknown>) {
-    setError("");
-    try {
-      await request();
-      onSaved();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-  return { error, setError, run };
+  const { run, ...action } = useAction();
+  return {
+    ...action,
+    run: (request: () => Promise<unknown>) =>
+      run(async () => {
+        await request();
+        onSaved();
+      }),
+  };
 }
 
 function ClientForm(props: { client?: Client; onSaved: () => void; onCancel: () => void }) {
@@ -143,7 +142,7 @@ function ClientForm(props: { client?: Client; onSaved: () => void; onCancel: () 
     currency: client?.currency ?? "TRY",
     notes: client?.notes ?? "",
   });
-  const { error, run } = useSubmit(props.onSaved);
+  const { busy, error, run } = useSubmit(props.onSaved);
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [key]: e.target.value });
 
@@ -180,7 +179,7 @@ function ClientForm(props: { client?: Client; onSaved: () => void; onCancel: () 
       </Field>
       <ErrorNote message={error} />
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={busy}>
           {client ? "Save client" : "Add client"}
         </button>
         <button type="button" className="btn" onClick={props.onCancel}>
@@ -190,6 +189,7 @@ function ClientForm(props: { client?: Client; onSaved: () => void; onCancel: () 
           <button
             type="button"
             className="btn btn-danger"
+            disabled={busy}
             onClick={() => {
               if (confirm(`Delete ${client.name}?`)) {
                 run(() => api(`/clients/${client.id}`, { method: "DELETE" }));
@@ -214,7 +214,7 @@ function ProjectForm(props: {
   const [name, setName] = useState(project?.name ?? "");
   const [rate, setRate] = useState(project ? hundredthsToInput(project.hourly_rate_minor) : "");
   const [archived, setArchived] = useState(project?.archived ?? false);
-  const { error, setError, run } = useSubmit(props.onSaved);
+  const { busy, error, setError, run } = useSubmit(props.onSaved);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -246,7 +246,7 @@ function ProjectForm(props: {
       )}
       <ErrorNote message={error} />
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={busy}>
           {project ? "Save project" : "Add project"}
         </button>
         <button type="button" className="btn" onClick={props.onCancel}>
@@ -256,6 +256,7 @@ function ProjectForm(props: {
           <button
             type="button"
             className="btn btn-danger"
+            disabled={busy}
             onClick={() => {
               if (confirm(`Delete ${project.name}?`)) {
                 run(() => api(`/projects/${project.id}`, { method: "DELETE" }));

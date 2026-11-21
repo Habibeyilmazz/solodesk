@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { api, type Client, type Invoice, type TimeEntry, useLoad } from "../api.ts";
+import { api, type Client, type Invoice, type TimeEntry, useAction, useLoad } from "../api.ts";
 import { ErrorNote, Field, PageHeader } from "../components/ui.tsx";
 import { formatDate, formatDuration } from "../lib/time.ts";
 import { useRefresh } from "../refresh.ts";
@@ -21,7 +21,7 @@ export default function InvoiceNew() {
   );
   // Entries are included unless unticked, so new ones arriving stay selected.
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
-  const [error, setError] = useState("");
+  const { busy, error, run } = useAction();
 
   const list = entries.data ?? [];
   const included = list.filter((e) => !excluded.has(e.id));
@@ -33,18 +33,15 @@ export default function InvoiceNew() {
     setExcluded(next);
   }
 
-  async function create() {
-    setError("");
-    try {
+  function create() {
+    run(async () => {
       const invoice = await api<Invoice>("/invoices", {
         method: "POST",
         body: { client_id: Number(clientId), time_entry_ids: included.map((e) => e.id) },
       });
       bump();
       navigate(`/invoices/${invoice.id}`);
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    });
   }
 
   if (clients.data?.length === 0) {
@@ -121,7 +118,7 @@ export default function InvoiceNew() {
 
         <ErrorNote message={error} />
         <div className="form-actions">
-          <button type="button" className="btn btn-primary" onClick={create} disabled={!clientId}>
+          <button type="button" className="btn btn-primary" onClick={create} disabled={!clientId || busy}>
             {included.length > 0 ? `Create draft with ${formatDuration(minutes)}` : "Create empty draft"}
           </button>
           <span className="muted">

@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Project, type TimeEntry, useLoad } from "../api.ts";
+import { api, type Project, type TimeEntry, useAction, useLoad } from "../api.ts";
 import { ProjectOptions } from "../components/ProjectOptions.tsx";
 import { Dialog, ErrorNote, Field, PageHeader } from "../components/ui.tsx";
 import {
@@ -128,18 +128,8 @@ function EntryForm(props: {
   const [duration, setDuration] = useState(entry ? durationToInput(entry.minutes) : "");
   const [description, setDescription] = useState(entry?.description ?? "");
   const [billable, setBillable] = useState(entry?.billable ?? true);
-  const [error, setError] = useState("");
+  const { busy, error, setError, run } = useAction();
   const selected = projectId || String(props.projects[0]?.id ?? "");
-
-  async function run(request: () => Promise<unknown>) {
-    setError("");
-    try {
-      await request();
-      props.onSaved();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -155,6 +145,7 @@ function EntryForm(props: {
         setDuration("");
         setDescription("");
       }
+      props.onSaved();
     });
   }
 
@@ -185,7 +176,7 @@ function EntryForm(props: {
         Billable
       </label>
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={busy}>
           {props.submitLabel}
         </button>
         {entry && (
@@ -196,9 +187,13 @@ function EntryForm(props: {
             <button
               type="button"
               className="btn btn-danger"
+              disabled={busy}
               onClick={() => {
                 if (confirm("Delete this time entry?")) {
-                  run(() => api(`/time/${entry.id}`, { method: "DELETE" }));
+                  run(async () => {
+                    await api(`/time/${entry.id}`, { method: "DELETE" });
+                    props.onSaved();
+                  });
                 }
               }}
             >

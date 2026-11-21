@@ -1,27 +1,21 @@
 import { type FormEvent, useState } from "react";
-import { api, setCsrfToken } from "../api.ts";
+import { api, setCsrfToken, useAction } from "../api.ts";
 import { ErrorNote } from "../components/ui.tsx";
 
 export default function Login({ onSignedIn }: { onSignedIn: () => void }) {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useAction();
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
+    run(async () => {
       const session = await api<{ csrf_token: string }>("/auth/login", {
         method: "POST",
         body: { password },
       });
       setCsrfToken(session.csrf_token);
       onSignedIn();
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-    }
+    });
   }
 
   return (
