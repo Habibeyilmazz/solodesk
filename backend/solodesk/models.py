@@ -203,6 +203,10 @@ class InvoiceCreate(InvoiceFields):
     time_entry_ids: Annotated[list[int], PField(max_length=5000)] = []
 
 
+class AddTimeIn(Body):
+    time_entry_ids: Annotated[list[int], PField(min_length=1, max_length=5000)]
+
+
 class StatusIn(Body):
     status: Literal["sent", "paid", "void"]
     paid_on: Day | None = None

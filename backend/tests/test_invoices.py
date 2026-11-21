@@ -371,3 +371,62 @@ def test_dates_outside_a_sane_range_are_refused_not_a_server_error(api, acme, da
     )
     entry = {"project_id": acme["project"]["id"], "date": day, "minutes": 5}
     assert api.post("/api/time", json=entry).status_code == 422
+
+
+def kept(line):
+    """A line from a response as the body that keeps it in a PUT."""
+    keys = ("id", "description", "quantity_hundredths", "unit_price_minor")
+    return {k: line[k] for k in keys}
+
+
+def test_adding_time_to_a_draft(api, acme):
+    cid, pid = acme["client"]["id"], acme["project"]["id"]
+    other = api.post("/api/projects", json={"client_id": cid, "name": "App"}).json()
+    first = log_time(api, pid, 60, "2026-03-02")
+    invoice = make_invoice(api, cid, time_entry_ids=[first["id"]], tax_rate_bp=0)
+    url = f"/api/invoices/{invoice['id']}/time"
+
+    later = log_time(api, pid, 30, "2026-03-09")
+    app_time = log_time(api, other["id"], 15, "2026-03-04")
+    r = api.post(url, json={"time_entry_ids": [later["id"], app_time["id"]]})
+    assert r.status_code == 200, r.text
+    lines = {line["description"]: line for line in r.json()["lines"]}
+    assert set(lines) == {"Brand guidelines", "Website: 2 Mar to 9 Mar 2026", "App: 4 Mar 2026"}
+    assert lines["Website: 2 Mar to 9 Mar 2026"]["quantity_hundredths"] == 150  # 1h + 0.5h
+    assert r.json()["subtotal_minor"] == 250_000 + 225_000
+    assert api.get("/api/time", params={"unbilled": True}).json() == []
+
+    # an edited description and quantity are kept; only the new hours are added
+    edited = [{**kept(line), "description": "Website work"} for line in r.json()["lines"]]
+    api.put(f"/api/invoices/{invoice['id']}", json={"lines": edited})
+    more = log_time(api, pid, 6, "2026-03-20")
+    lines = api.post(url, json={"time_entry_ids": [more["id"]]}).json()["lines"]
+    website = next(line for line in lines if line["project_id"] == pid)
+    assert website["description"] == "Website work" and website["quantity_hundredths"] == 160
+
+    # removing the merged line releases every entry behind it
+    keep = [kept(line) for line in lines if line["project_id"] != pid]
+    api.put(f"/api/invoices/{invoice['id']}", json={"lines": keep})
+    assert len(api.get("/api/time", params={"unbilled": True}).json()) == 3
+
+
+def test_adding_time_is_for_drafts_and_unbilled_entries_only(api, acme):
+    cid, pid = acme["client"]["id"], acme["project"]["id"]
+    entry = log_time(api, pid, 60)
+    invoice = make_invoice(api, cid, time_entry_ids=[entry["id"]])
+    url = f"/api/invoices/{invoice['id']}/time"
+    assert api.post(url, json={"time_entry_ids": [entry["id"]]}).status_code == 422  # billed
+    assert api.post(url, json={"time_entry_ids": []}).status_code == 422
+    other = api.post("/api/clients", json={"name": "Other"}).json()
+    elsewhere = api.post("/api/projects", json={"client_id": other["id"], "name": "X"}).json()
+    foreign = log_time(api, elsewhere["id"], 30)
+    assert api.post(url, json={"time_entry_ids": [foreign["id"]]}).status_code == 422
+    assert api.get(f"/api/invoices/{invoice['id']}").json()["lines"] == invoice["lines"]
+
+    mark(api, invoice["id"], "sent")
+    fresh = log_time(api, pid, 30)
+    assert api.post(url, json={"time_entry_ids": [fresh["id"]]}).status_code == 409
+    assert (
+        api.post("/api/invoices/999/time", json={"time_entry_ids": [fresh["id"]]}).status_code
+        == 404
+    )

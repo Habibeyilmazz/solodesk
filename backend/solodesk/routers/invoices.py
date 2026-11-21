@@ -7,6 +7,7 @@ from ..db import today
 from ..deps import get_db, get_or_404
 from ..models import (
     MAX_LINES,
+    AddTimeIn,
     Client,
     Invoice,
     InvoiceCreate,
@@ -224,6 +225,39 @@ def update_invoice(invoice_id: int, body: InvoiceFields, db: Session = Depends(g
             _release_time(db, invoice_id, removed.project_id)
         db.delete(removed)
     _recalculate(invoice, kept)
+    db.commit()
+    return invoice_out(invoice, db.get(Client, invoice.client_id), get_lines(db, invoice_id))
+
+
+@router.post("/{invoice_id}/time")
+def add_time(invoice_id: int, body: AddTimeIn, db: Session = Depends(get_db)) -> dict:
+    """Bill more tracked time on a draft.
+
+    A project that already has a time line on the draft gets the hours added to that line
+    (its date span is updated too, unless the description was edited); others get a new line.
+    """
+    invoice = _draft(db, invoice_id)
+    lines = get_lines(db, invoice_id)
+    time_lines = {line.project_id: line for line in lines if line.project_id is not None}
+    for line in _lines_from_time(db, invoice, body.time_entry_ids):
+        old = time_lines.get(line.project_id)
+        if old is None:
+            lines.append(line)
+            db.add(line)
+            continue
+        old.quantity_hundredths += line.quantity_hundredths
+        dates = db.exec(
+            select(TimeEntry.id, TimeEntry.date)
+            .where(TimeEntry.invoice_id == invoice_id, TimeEntry.project_id == line.project_id)
+            .order_by(TimeEntry.date)
+        ).all()
+        before = [d for id_, d in dates if id_ not in body.time_entry_ids]
+        name = db.get(Project, line.project_id).name
+        if before and old.description == f"{name}: {_span(before[0], before[-1])}":
+            old.description = f"{name}: {_span(dates[0][1], dates[-1][1])}"
+    if len(lines) > MAX_LINES:
+        raise HTTPException(422, f"An invoice can have at most {MAX_LINES} lines.")
+    _recalculate(invoice, lines)
     db.commit()
     return invoice_out(invoice, db.get(Client, invoice.client_id), get_lines(db, invoice_id))
 
