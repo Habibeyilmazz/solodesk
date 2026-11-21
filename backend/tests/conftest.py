@@ -9,9 +9,13 @@ PASSWORD = "correct horse battery"
 PASSWORD_HASH = hash_password(PASSWORD)  # hashed once: scrypt is deliberately slow
 
 
+def make_app(db_path, session_key=b"test-key"):
+    return create_app(Config(db_path=db_path, password_hash=PASSWORD_HASH, session_key=session_key))
+
+
 @pytest.fixture
 def app(tmp_path):
-    return create_app(Config(db_path=tmp_path / "test.db", password_hash=PASSWORD_HASH))
+    return make_app(tmp_path / "test.db")
 
 
 @pytest.fixture

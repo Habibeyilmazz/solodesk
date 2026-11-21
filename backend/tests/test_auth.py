@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
 
 from solodesk.auth import LoginLimiter, hash_password, verify_password
+from solodesk.config import from_env
 
-from .conftest import PASSWORD
+from .conftest import PASSWORD, make_app
 from .test_concurrency import together
 
 
@@ -63,6 +64,29 @@ def test_stolen_cookie_is_useless_after_logout(app, api):
     api.post("/api/auth/logout")
     with TestClient(app, cookies={"solodesk_session": token}) as thief:
         assert thief.get("/api/clients").status_code == 401
+
+
+def test_sessions_survive_a_restart_but_not_a_password_change(tmp_path, api):
+    token = api.cookies["solodesk_session"]
+    for session_key, expected in ((b"test-key", 200), (b"key-of-a-new-password", 401)):
+        restarted = make_app(tmp_path / "test.db", session_key)
+        with TestClient(restarted, cookies={"solodesk_session": token}) as client:
+            assert client.get("/api/clients").status_code == expected
+
+
+def test_session_key_follows_the_password(tmp_path, monkeypatch):
+    monkeypatch.setenv("SOLODESK_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("SOLODESK_PASSWORD_HASH", raising=False)
+
+    def key(name, value):
+        monkeypatch.setenv(name, value)
+        return from_env().session_key
+
+    first = key("SOLODESK_PASSWORD", "first-password")
+    assert key("SOLODESK_PASSWORD", "first-password") == first  # same after a restart
+    assert key("SOLODESK_PASSWORD", "second-password") != first
+    stored = hash_password("first-password")
+    assert key("SOLODESK_PASSWORD_HASH", stored) == stored.encode()  # a configured hash is the key
 
 
 def test_login_is_rate_limited(anon):

@@ -31,7 +31,9 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
     db.add(
         AuthSession(
-            token_hash=hash_token(token), csrf_token=csrf, expires_at=utcnow() + SESSION_LIFETIME
+            token_hash=hash_token(token, config.session_key),
+            csrf_token=csrf,
+            expires_at=utcnow() + SESSION_LIFETIME,
         )
     )
     db.commit()

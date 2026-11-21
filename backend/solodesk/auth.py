@@ -26,9 +26,13 @@ def _scrypt(password: str, salt: bytes) -> bytes:
     return hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
 
 
-def hash_token(token: str) -> str:
-    """Session tokens are stored hashed so a leaked database holds no usable cookies."""
-    return hashlib.sha256(token.encode()).hexdigest()
+def hash_token(token: str, key: bytes) -> str:
+    """Session tokens are stored hashed so a leaked database holds no usable cookies.
+
+    The hash is keyed with a value derived from the password (Config.session_key), so
+    changing the password ends every session that was opened with the old one.
+    """
+    return hmac.new(key, token.encode(), "sha256").hexdigest()
 
 
 class LoginLimiter:

@@ -19,7 +19,8 @@ def get_db(request: Request):
 
 def current_session(request: Request, db: Session) -> AuthSession | None:
     token = request.cookies.get(SESSION_COOKIE)
-    sess = db.get(AuthSession, hash_token(token)) if token else None
+    key = request.app.state.config.session_key
+    sess = db.get(AuthSession, hash_token(token, key)) if token else None
     return sess if sess and sess.expires_at > utcnow() else None
 
 
