@@ -51,18 +51,27 @@ jobs:
         run: docker compose config --quiet
       - name: Build image
         run: docker compose build
-      - name: Start the container and wait for it to answer
+      - name: Seed, start the container and wait for it to answer
         env:
           SOLODESK_PASSWORD: ci-only-password
+          TZ: Pacific/Kiritimati # UTC+14 all year, so a missing time zone database shows
         run: |
           docker compose run --rm solodesk python -m solodesk.seed
           docker compose up -d
           for attempt in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:4150/api/health; then
-              curl -fsS http://127.0.0.1:4150/ | grep -q '<div id="root">'
-              exit 0
-            fi
+            curl -fsS http://127.0.0.1:4150/api/health && exit 0
             sleep 1
           done
-          docker compose logs
           exit 1
+      - name: Sign in, fetch an invoice PDF and check the time zone
+        run: |
+          curl -fsS http://127.0.0.1:4150/ | grep -q '<div id="root">'
+          curl -fsS -c cookies.txt -H 'Content-Type: application/json' \
+            -d '{"password": "ci-only-password"}' http://127.0.0.1:4150/api/auth/login
+          curl -fsS -b cookies.txt -o invoice.pdf http://127.0.0.1:4150/api/invoices/1/pdf
+          head -c 5 invoice.pdf | grep -q '%PDF-'
+          docker compose exec -T solodesk python -c \
+            "import time; offset = time.strftime('%z'); assert offset == '+1400', offset"
+      - name: Container logs
+        if: failure()
+        run: docker compose logs
