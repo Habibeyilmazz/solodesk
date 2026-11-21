@@ -3,7 +3,7 @@ name = "solodesk"
 version = "0.1.0"
 description = "Self-hosted back office for freelancers: clients, projects, time tracking and invoices."
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = "MIT"
 dependencies = [
     "fastapi>=0.165",
     "uvicorn[standard]>=0.54",
@@ -15,11 +15,11 @@ dependencies = [
 dev = ["pytest>=9", "httpx2>=2.16", "ruff>=0.17"]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["solodesk"]
+packages = ["solodesk", "solodesk.routers", "solodesk.fonts"]
 
 [tool.setuptools.package-data]
 solodesk = ["fonts/*"]

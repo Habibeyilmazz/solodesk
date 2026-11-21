@@ -13,7 +13,7 @@ __pycache__/
 
 # node
 node_modules/
-frontend/dist/
+
 frontend/test-results/
 frontend/playwright-report/
 
@@ -28,3 +28,7 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# build output
+build/
+dist/

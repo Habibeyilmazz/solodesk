@@ -103,7 +103,8 @@ Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max
 Short = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
 Text = Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)]
 BasisPoints = Annotated[int, PField(ge=0, le=10_000)]
-Minor = Annotated[int, PField(ge=0, le=10**11)]
+# Limits keep any invoice total far below SQLite's 64-bit integers and JavaScript's 2**53.
+Minor = Annotated[int, PField(ge=0, le=10**9)]
 
 
 class Body(BaseModel):
@@ -154,7 +155,7 @@ class LineIn(Body):
     description: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
     ]
-    quantity_hundredths: Annotated[int, PField(ge=1, le=10**8)]
+    quantity_hundredths: Annotated[int, PField(ge=1, le=10**6)]
     unit_price_minor: Minor
 
 

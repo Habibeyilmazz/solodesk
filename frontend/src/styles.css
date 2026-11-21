@@ -524,6 +524,7 @@ a.tag {
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
+  position: relative; /* keeps the visually hidden button text inside the table's scroll box */
 }
 
 .ledger th,
@@ -814,7 +815,7 @@ a.tag {
 }
 
 .col-unbilled {
-  width: 10rem;
+  width: 7rem;
 }
 
 .col-edit {
@@ -1170,7 +1171,32 @@ dialog h2 {
   }
 
   .ledger .grow {
-    min-width: 9rem;
+    min-width: 7rem;
+  }
+
+  .client .ledger {
+    table-layout: auto;
+  }
+
+  .client .ledger th,
+  .client .ledger td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .client .ledger [class*="col-"] {
+    width: auto;
+  }
+
+  /* the time log is read on phones: let names wrap so Edit stays on screen */
+  .day .ledger th {
+    white-space: normal;
+  }
+
+  .day .ledger th,
+  .day .ledger td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
   .lines.editing td:first-child input {

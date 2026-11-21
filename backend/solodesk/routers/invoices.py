@@ -253,7 +253,7 @@ def invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
         db.get(Settings, 1),
         effective_status(invoice, today()),
     )
-    name = invoice.number or f"draft-{invoice.id}"
+    name = (invoice.number or f"draft-{invoice.id}").replace("/", "-")
     return Response(
         pdf,
         media_type="application/pdf",

@@ -243,3 +243,19 @@ def test_pdf_export(api, acme):
     sent = api.get(f"/api/invoices/{invoice['id']}/pdf")
     assert "INV-0001.pdf" in sent.headers["content-disposition"]
     assert api.get("/api/invoices/999/pdf").status_code == 404
+
+
+def test_amounts_are_bounded(api, acme):
+    cid = acme["client"]["id"]
+    huge_price = {**LINE, "unit_price_minor": 10**9 + 1}
+    huge_quantity = {**LINE, "quantity_hundredths": 10**6 + 1}
+    for line in (huge_price, huge_quantity):
+        assert (
+            api.post("/api/invoices", json={"client_id": cid, "lines": [line]}).status_code == 422
+        )
+    biggest = {**LINE, "unit_price_minor": 10**9, "quantity_hundredths": 10**6}
+    invoice = api.post(
+        "/api/invoices", json={"client_id": cid, "lines": [biggest] * 200, "tax_rate_bp": 10_000}
+    ).json()
+    assert invoice["total_minor"] == 4 * 10**15  # exact, and still below 2**53
+    assert invoice["total_minor"] < 2**53

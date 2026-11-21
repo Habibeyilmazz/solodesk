@@ -105,6 +105,16 @@ CLIENTS = [
             )
         ],
     ),
+    (
+        Client(
+            name="Poyraz Lojistik",
+            email="finans@poyrazlojistik.example",
+            address="Örnek Bulvarı No: 48\nNilüfer, Bursa",
+            tax_id="5556667778",
+            currency="TRY",
+        ),
+        [("Sipariş takip paneli", 170_000, ["Sevkiyat listesi", "Raporlar", "Kullanıcı rolleri"])],
+    ),
 ]
 
 EXTRAS = [("Domain and hosting, 1 year", 240_000), ("Stock photography licence", 95_000)]
@@ -145,7 +155,7 @@ def seed(db: Session, on: dt.date) -> None:
     day = month_start(on, MONTHS_BACK)
     while day <= on:
         if day.weekday() < 5 and rng.random() < 0.9:
-            for project, tasks in rng.sample(projects, k=rng.choice((1, 2, 2, 3))):
+            for project, tasks in rng.sample(projects, k=rng.choice((2, 2, 3))):
                 db.add(
                     TimeEntry(
                         project_id=project.id,
@@ -159,7 +169,7 @@ def seed(db: Session, on: dt.date) -> None:
     db.flush()
 
     # one invoice per client per finished month, numbered in the order they were issued
-    last_month_fate = ["sent", "paid", "overdue", "sent", "overdue"]
+    last_month_fate = ["paid", "sent", "overdue", "sent", "overdue", "sent"]
     number = 0
     for back in range(MONTHS_BACK, 0, -1):
         first, after = month_start(on, back), month_start(on, back - 1)

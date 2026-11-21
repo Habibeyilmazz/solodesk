@@ -67,7 +67,7 @@ export default function Clients() {
                   <tr>
                     <th scope="col">Project</th>
                     <th scope="col" className="num col-rate">Hourly rate</th>
-                    <th scope="col" className="num col-unbilled">Not yet invoiced</th>
+                    <th scope="col" className="num col-unbilled">Unbilled</th>
                     <th scope="col" className="col-edit" />
                   </tr>
                 </thead>
