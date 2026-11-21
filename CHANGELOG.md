@@ -6,6 +6,14 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed (round 14, launch lens)
+
+- Dockerfile base images are pinned to digests (node:22-slim, python:3.12-slim as of 2026-11-22), so the
+  CI image build is reproducible. To upgrade, look up the new index digest and edit both `FROM` lines.
+- Checked the launch material (README, demo recording, screenshots, comparison, roadmap, CONTRIBUTING,
+  issue templates, repo description and topics): accurate and complete, nothing else changed. No homepage
+  is set because there is no hosted site.
+
 ### Fixed (round 13, tests lens)
 
 Tried to break the running API with odd input (emoji and CJK names, 400-character words,
@@ -21,7 +29,7 @@ bad query values). Almost everything held; two real bugs, each with a failing te
   `make` install with it. Regenerate it from a clean venv with `pip freeze` when upgrading.
 - Known and left alone: the PDF font (DejaVu Sans) has no CJK or Arabic-ligature glyphs, so
   those characters print blank in PDFs (the app warns in its log); the API and UI show them.
-- Still open: Docker base images are tags, not digests; the Toggl parser is untested on a real
+- Still open: the Toggl parser is untested on a real
   export (only on synthetic files shaped like one); no scheduled recurring invoices.
   Commits are signed with the model name the harness assigns.
 
