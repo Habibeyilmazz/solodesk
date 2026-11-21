@@ -16,8 +16,14 @@ def utcnow() -> dt.datetime:
 
 # ---------- tables ----------
 
+# AUTOINCREMENT: SQLite would otherwise hand a deleted row's id to the next insert, and a tab
+# still showing the deleted draft could then edit an unrelated invoice. Applies to new databases.
+NO_ID_REUSE = {"sqlite_autoincrement": True}
+MAX_LINES = 200
+
 
 class Client(SQLModel, table=True):
+    __table_args__ = NO_ID_REUSE
     id: int | None = Field(default=None, primary_key=True)
     name: str
     email: str = ""
@@ -29,6 +35,7 @@ class Client(SQLModel, table=True):
 
 
 class Project(SQLModel, table=True):
+    __table_args__ = NO_ID_REUSE
     id: int | None = Field(default=None, primary_key=True)
     client_id: int = Field(foreign_key="client.id", index=True)
     name: str
@@ -38,6 +45,7 @@ class Project(SQLModel, table=True):
 
 
 class Invoice(SQLModel, table=True):
+    __table_args__ = NO_ID_REUSE
     id: int | None = Field(default=None, primary_key=True)
     client_id: int = Field(foreign_key="client.id", index=True)
     number: str | None = Field(default=None, unique=True)  # assigned when sent
@@ -57,6 +65,7 @@ class Invoice(SQLModel, table=True):
 
 
 class InvoiceLine(SQLModel, table=True):
+    __table_args__ = NO_ID_REUSE
     id: int | None = Field(default=None, primary_key=True)
     invoice_id: int = Field(foreign_key="invoice.id", index=True)
     position: int = 0
@@ -80,6 +89,7 @@ class IssuedCopy(SQLModel, table=True):
 
 
 class TimeEntry(SQLModel, table=True):
+    __table_args__ = NO_ID_REUSE
     id: int | None = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="project.id", index=True)
     date: dt.date = Field(index=True)
@@ -177,7 +187,7 @@ class InvoiceFields(Body):
     tax_rate_bp: BasisPoints | None = None  # default: from settings
     discount_bp: BasisPoints = 0
     notes: Text = ""
-    lines: Annotated[list[LineIn], PField(max_length=200)] = []
+    lines: Annotated[list[LineIn], PField(max_length=MAX_LINES)] = []
 
     @model_validator(mode="after")
     def due_not_before_issue(self):

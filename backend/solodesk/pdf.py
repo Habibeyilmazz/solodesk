@@ -110,7 +110,8 @@ def render_invoice(
         for line in lines:
             table.row(
                 (
-                    line.description,
+                    # one paragraph: a table row taller than a page cannot be drawn at all
+                    " ".join(line.description.split()),
                     _quantity(line.quantity_hundredths),
                     money(line.unit_price_minor),
                     money(line.amount_minor),

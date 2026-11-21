@@ -6,6 +6,7 @@ from sqlmodel import Session, select, update
 from ..db import today
 from ..deps import get_db, get_or_404
 from ..models import (
+    MAX_LINES,
     Client,
     Invoice,
     InvoiceCreate,
@@ -178,6 +179,8 @@ def create_invoice(body: InvoiceCreate, db: Session = Depends(get_db)) -> dict:
     db.flush()
     lines = _lines_from_time(db, invoice, body.time_entry_ids) if body.time_entry_ids else []
     lines += [_new_line(invoice.id, line) for line in body.lines]
+    if len(lines) > MAX_LINES:  # time lines count too, or the draft could never be saved again
+        raise HTTPException(422, f"An invoice can have at most {MAX_LINES} lines.")
     _recalculate(invoice, lines)
     db.add_all(lines)
     db.commit()

@@ -10,6 +10,19 @@ Found by cloning the repository fresh and following the README, then reading the
 
 ### Fixed
 
+- `make` with a Python older than 3.12 (macOS ships 3.9) now stops with a clear message.
+  Before, pip failed with an unrelated error about `setup.py` and left a half-made `.venv`,
+  so the README's own fix, `make run PYTHON=python3.12`, then failed with
+  "dotenv: No such file". A failed install now removes the venv. Plain `make` runs the app.
+- A deleted draft's id is no longer handed to the next invoice. A second tab still showing
+  the deleted draft could save into the new, unrelated invoice and replace its lines. The
+  same applies to clients, projects, lines and time entries. This only takes effect in
+  databases created from now on; older ones keep SQLite's default id reuse until there is a
+  migration story.
+- An invoice built from tracked time plus 200 fixed lines is refused at creation instead of
+  becoming a draft that can never be saved or sent.
+- The PDF no longer fails (500) on a line description with many line breaks (possible
+  through the API); line descriptions print as one paragraph.
 - Changing the password now ends every open session. A cookie issued under the example
   password used to stay valid for 14 days after the password was changed. Upgrading signs
   everyone out once.
@@ -24,6 +37,7 @@ Found by cloning the repository fresh and following the README, then reading the
 
 ### Changed
 
+- README: Node 22.12+ is required (Vite 8's floor), 22.18+ for `make test`.
 - CI signs in to the Docker container, downloads an invoice PDF, checks that `TZ` takes
   effect and runs the backup commands from the README.
 - README: how to change the password, quoting in `.env`, `PYTHON=` for older systems, Docker
@@ -32,6 +46,10 @@ Found by cloning the repository fresh and following the README, then reading the
 - Removed unused re-exports from `db.py`.
 
 ### Checked, no change needed
+
+- Second fresh-clone pass (round 1, first-run lens): `make seed`, `make run`, `make dev`,
+  `make test`, `make lint` and `make e2e` all work as the README says on macOS with
+  Python 3.12 and Node 22.
 
 - The invoice PDF opens in Chromium's built-in viewer and in macOS Quick Look, including a
   ten-page invoice with long Turkish text.

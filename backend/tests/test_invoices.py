@@ -281,3 +281,36 @@ def test_amounts_are_bounded(api, acme):
     ).json()
     assert invoice["total_minor"] == 4 * 10**15  # exact, and still below 2**53
     assert invoice["total_minor"] < 2**53
+
+
+def test_ids_of_deleted_rows_are_never_reused(api, acme):
+    # A tab still showing a deleted draft must not be able to edit whatever takes its id.
+    cid, pid = acme["client"]["id"], acme["project"]["id"]
+    old = make_invoice(api, cid)
+    assert api.delete(f"/api/invoices/{old['id']}").status_code == 204
+    new = make_invoice(api, cid)
+    assert new["id"] != old["id"]
+    assert new["lines"][0]["id"] != old["lines"][0]["id"]
+    stale = {"lines": [{**LINE, "id": old["lines"][0]["id"]}]}
+    assert api.put(f"/api/invoices/{old['id']}", json=stale).status_code == 404
+
+    entry = log_time(api, pid, 30)
+    assert api.delete(f"/api/time/{entry['id']}").status_code == 204
+    assert log_time(api, pid, 30)["id"] != entry["id"]
+
+
+def test_time_lines_count_towards_the_line_limit(api, acme):
+    entry = log_time(api, acme["project"]["id"], 60)
+    body = {
+        "client_id": acme["client"]["id"],
+        "time_entry_ids": [entry["id"]],
+        "lines": [LINE] * 200,
+    }
+    assert api.post("/api/invoices", json=body).status_code == 422
+    assert len(api.get("/api/time", params={"unbilled": True}).json()) == 1  # nothing was billed
+
+
+def test_pdf_of_a_line_with_many_line_breaks(api, acme):
+    tall = {**LINE, "description": "x\n" * 249 + "x"}
+    invoice = make_invoice(api, acme["client"]["id"], lines=[tall])
+    assert api.get(f"/api/invoices/{invoice['id']}/pdf").status_code == 200
