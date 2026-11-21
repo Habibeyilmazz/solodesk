@@ -1,17 +1,18 @@
 """The solodesk application: JSON API under /api, the built React app everywhere else."""
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlmodel import Session
 from starlette.middleware.gzip import GZipMiddleware
 
 from . import __version__
 from .auth import LoginLimiter
 from .config import Config, from_env
 from .db import make_engine
-from .deps import require_auth
+from .deps import SAFE_METHODS, current_session, require_auth
 from .routers import auth, clients, imports, invoices, reports, settings, time
 
 CSP = (
@@ -27,23 +28,31 @@ SWAGGER_SRI = {
 }
 # The largest valid body is a Toggl import: 5,000,000 characters, as UTF-8 and JSON-escaped.
 MAX_BODY_BYTES = 32 * 1024 * 1024
+# Before sign-in the only body is a password (at most 1024 characters, JSON-escaped).
+MAX_ANON_BODY_BYTES = 16 * 1024
 
 
 class BodyLimit:
-    """Refuse request bodies over `limit` bytes before they are read into memory.
+    """Refuse oversized request bodies before they are read into memory.
 
-    FastAPI reads the whole body before checking the session, so without this anyone who
-    can reach the port could make the process hold gigabytes with one request.
+    FastAPI parses the whole body before it checks the session, and parsed JSON takes about
+    25 times its size in memory, so anyone who can reach the port could exhaust it. Without
+    a valid session cookie a body may be 16 KiB, with one 32 MiB.
     """
 
-    def __init__(self, app, limit: int = MAX_BODY_BYTES):
-        self.app, self.limit = app, limit
+    def __init__(self, app):
+        self.app = app
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
+        limit = MAX_ANON_BODY_BYTES
+        if scope["method"] not in SAFE_METHODS:
+            with Session(scope["app"].state.engine) as db:
+                if current_session(Request(scope), db):
+                    limit = MAX_BODY_BYTES
         length = dict(scope["headers"]).get(b"content-length", b"")
-        if length.isdigit() and int(length) > self.limit:
+        if length.isdigit() and int(length) > limit:
             response = JSONResponse({"detail": "Request body too large"}, 413)
             return await response(scope, receive, send)
         received = 0
@@ -52,7 +61,7 @@ class BodyLimit:
             nonlocal received
             message = await receive()
             received += len(message.get("body", b""))
-            if received > self.limit:
+            if received > limit:
                 raise HTTPException(413, "Request body too large")
             return message
 

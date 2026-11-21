@@ -126,8 +126,8 @@ arrives from the same address, so the lockout then applies to all of them togeth
 that are already open keep working. On top of that, 50 failed logins from all addresses together
 within 15 minutes stop every login until the oldest failure is 15 minutes old. That cap holds even
 when an attacker fakes or rotates addresses, at the price that a sustained attack also keeps you
-out until it stops. Request bodies over 32 MB are refused (413) before they are read, signed
-in or not.
+out until it stops. Request bodies are refused (413) before they are read when they pass 16 KB
+without a session, or 32 MB with one.
 
 **API docs.** The OpenAPI schema and Swagger UI are at `/api/docs` on a running instance.
 Swagger UI loads from the jsDelivr CDN, pinned to one version and checked with integrity hashes.
