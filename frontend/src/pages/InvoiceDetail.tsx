@@ -328,7 +328,9 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
               <th scope="col" className="num">Qty</th>
               <th scope="col" className="num">Unit price</th>
               <th scope="col" className="num">Amount</th>
-              <th scope="col" />
+              <th scope="col">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>

@@ -237,6 +237,8 @@ def test_pdf_export(api, acme):
     assert draft.status_code == 200
     assert draft.headers["content-type"] == "application/pdf"
     assert draft.content.startswith(b"%PDF-") and len(draft.content) > 5_000
+    assert "content-security-policy" not in draft.headers  # would break built-in PDF viewers
+    assert draft.headers["x-frame-options"] == "DENY"
     assert f"draft-{invoice['id']}.pdf" in draft.headers["content-disposition"]
 
     mark(api, invoice["id"], "sent")

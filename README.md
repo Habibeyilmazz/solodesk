@@ -62,7 +62,7 @@ Data lives in `data/solodesk.db` (SQLite). Back it up by copying that file.
 backend/solodesk/   FastAPI app: models, routers, money arithmetic, PDF, seed script
 backend/tests/      pytest API and unit tests
 frontend/src/       React + TypeScript UI
-frontend/e2e/       Playwright smoke test of the main flow
+frontend/e2e/       Playwright tests: the main flow, then edits and undo paths
 ```
 
 **Money is never a float.** Amounts are integers in minor units (kuruş, cents, pence),
@@ -81,7 +81,7 @@ SHA-256 hash, sent in an `HttpOnly`, `SameSite=Strict` cookie. Every write must 
 session's CSRF token in an `X-CSRF-Token` header. Five failed logins from one address lock that
 address out for 15 minutes.
 
-**API docs.** Interactive OpenAPI docs are at `/api/docs` on a running instance.
+**API docs.** The OpenAPI schema and Swagger UI are at `/api/docs` on a running instance.
 
 ## Configuration
 
@@ -102,7 +102,7 @@ with TLS in front and set `SOLODESK_COOKIE_SECURE=1`.
 make dev    # API with reload on :4150, UI with hot reload on http://localhost:4151
 make test   # pytest, frontend unit tests, typecheck
 make lint   # ruff
-make e2e    # Playwright smoke test (once: cd frontend && npx playwright install chromium)
+make e2e    # Playwright tests against the built app (once: cd frontend && npx playwright install chromium)
 ```
 
 CI runs all of these on every push, then builds the Docker image and checks that the

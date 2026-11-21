@@ -22,7 +22,7 @@ First release.
   cookie, CSRF token on writes, login rate limit, security headers.
 - Demo data (`make seed`), Makefile (`make dev`, `make run`), Dockerfile and compose file.
 - Tests: pytest API and unit tests, Node unit tests for the money and duration parsers,
-  a Playwright smoke test, and a CI workflow that also builds and boots the Docker image.
+  two Playwright specs (the main flow, then edits and undo paths), and a CI workflow that also builds and boots the Docker image.
 
 ### Notes for whoever works on this next
 

@@ -39,7 +39,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["X-Frame-Options"] = "DENY"
-        if request.url.path != "/api/docs":  # Swagger UI loads its assets from a CDN
+        # Not on Swagger UI (it loads assets from a CDN) and not on PDFs: a CSP on the PDF
+        # response itself can stop the browser's built-in viewer from rendering it.
+        is_pdf = response.headers.get("content-type") == "application/pdf"
+        if request.url.path != "/api/docs" and not is_pdf:
             response.headers["Content-Security-Policy"] = CSP
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
