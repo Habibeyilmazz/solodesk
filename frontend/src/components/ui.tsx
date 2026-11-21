@@ -50,6 +50,7 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
   sent: "Sent",
   overdue: "Overdue",
   paid: "Paid",
+  void: "Void",
 };
 
 /** Status in a list: a coloured dot and a word, so colour is never the only signal. */

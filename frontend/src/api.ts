@@ -37,7 +37,7 @@ export type TimeEntry = {
   invoice_number: string | null;
 };
 
-export type InvoiceStatus = "draft" | "sent" | "overdue" | "paid";
+export type InvoiceStatus = "draft" | "sent" | "overdue" | "paid" | "void";
 
 export type InvoiceLine = {
   id: number;

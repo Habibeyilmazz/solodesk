@@ -11,6 +11,7 @@ const FILTERS: [InvoiceStatus | "", string][] = [
   ["sent", "Sent"],
   ["overdue", "Overdue"],
   ["paid", "Paid"],
+  ["void", "Void"],
 ];
 
 export default function Invoices() {

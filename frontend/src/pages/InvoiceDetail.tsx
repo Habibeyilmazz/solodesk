@@ -43,7 +43,7 @@ function BackLink() {
   );
 }
 
-// ---------- sent, overdue and paid invoices: read-only ----------
+// ---------- sent, overdue, paid and void invoices: read-only ----------
 
 function IssuedInvoice({ invoice }: { invoice: Invoice }) {
   const { bump } = useRefresh();
@@ -51,7 +51,16 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
   const { busy, error, run } = useAction();
   const money = (minor: number) => formatMoney(minor, invoice.currency);
 
-  function mark(status: "sent" | "paid") {
+  function mark(status: "sent" | "paid" | "void") {
+    if (
+      status === "void" &&
+      !confirm(
+        `Void ${invoice.number}? It keeps its number and stays in your records, but is no longer ` +
+          "owed. Its tracked time becomes billable again. This cannot be undone.",
+      )
+    ) {
+      return;
+    }
     run(async () => {
       await api(`/invoices/${invoice.id}/status`, {
         method: "POST",
@@ -140,7 +149,9 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
         <a className="btn" href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noreferrer">
           Open PDF
         </a>
-        {invoice.status === "paid" ? (
+        {invoice.status === "void" ? (
+          <span className="muted">Voided: no longer owed. Any tracked time on it can be invoiced again.</span>
+        ) : invoice.status === "paid" ? (
           <button type="button" className="btn" onClick={() => mark("sent")} disabled={busy}>
             Mark as unpaid
           </button>
@@ -151,6 +162,9 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
             </Field>
             <button type="button" className="btn btn-primary" onClick={() => mark("paid")} disabled={!paidOn || busy}>
               Mark as paid
+            </button>
+            <button type="button" className="btn btn-danger" onClick={() => mark("void")} disabled={busy}>
+              Void invoice
             </button>
           </>
         )}

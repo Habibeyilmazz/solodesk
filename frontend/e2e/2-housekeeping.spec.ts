@@ -138,6 +138,19 @@ test("change settings, fix mistakes and undo things", async ({ page }) => {
   await expect(workshop.getByRole("button", { name: /^Edit/ })).toHaveCount(0);
   await expect(workshop.getByRole("link", { name: /^INV-/ })).toBeVisible();
 
+  // a sent invoice with a mistake is voided: it keeps its number, its time is unbilled again
+  await workshop.getByRole("link", { name: /^INV-/ }).click();
+  const number = (await page.getByRole("heading", { name: /^Invoice INV-/ }).textContent())!.slice(8);
+  page.once("dialog", (confirm) => confirm.accept());
+  await page.getByRole("button", { name: "Void invoice" }).click();
+  await expect(page.locator(".stamp")).toHaveText("Void");
+  await expect(page.getByRole("button", { name: "Mark as paid" })).toHaveCount(0);
+  await page.getByRole("link", { name: "All invoices" }).click();
+  await page.getByRole("button", { name: /^Void/ }).click();
+  await expect(page.getByRole("row", { name: /Beta Limited/ })).toContainText(number);
+  await page.getByRole("link", { name: "Time", exact: true }).click();
+  await expect(workshop.getByRole("button", { name: /^Edit/ })).toBeVisible();
+
   // a client with history cannot be deleted by accident
   await page.getByRole("link", { name: "Clients", exact: true }).click();
   await page.getByRole("button", { name: "Edit client Beta Limited" }).click();

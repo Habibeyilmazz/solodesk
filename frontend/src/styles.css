@@ -936,6 +936,10 @@ a.tag {
   color: var(--green);
 }
 
+.status-void {
+  color: var(--pencil);
+}
+
 .back {
   margin-bottom: 1rem;
 }
