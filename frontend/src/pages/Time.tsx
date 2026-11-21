@@ -56,7 +56,7 @@ export default function Time() {
             <h2>{formatWeekday(date)}</h2>
             <span className="num">{formatDuration(list.reduce((sum, e) => sum + e.minutes, 0))}</span>
           </header>
-          <table className="ledger">
+          <table className="ledger stacks">
             <tbody>
               {list.map((entry) => (
                 <tr key={entry.id}>

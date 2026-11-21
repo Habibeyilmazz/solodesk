@@ -58,7 +58,7 @@ export default function Invoices() {
           )}
         </p>
       ) : (
-        <table className="ledger invoices">
+        <table className="ledger invoices stacks">
           <thead>
             <tr>
               <th scope="col">Number</th>
@@ -76,8 +76,8 @@ export default function Invoices() {
                   <Link to={`/invoices/${invoice.id}`}>{invoice.number ?? "Draft"}</Link>
                 </th>
                 <td>{invoice.client_name}</td>
-                <td>{formatDate(invoice.issue_date)}</td>
-                <td>{formatDate(invoice.due_date)}</td>
+                <td className="small">{formatDate(invoice.issue_date)}</td>
+                <td className="small">{formatDate(invoice.due_date)}</td>
                 <td>
                   <StatusMark status={invoice.status} />
                 </td>

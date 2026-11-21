@@ -311,7 +311,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
             </Field>
           </div>
 
-          <table className="ledger lines editing">
+          <table className="ledger lines editing stacks">
             <thead>
               <tr>
                 <th scope="col">Description</th>

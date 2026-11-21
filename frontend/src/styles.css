@@ -13,13 +13,48 @@
   --green: #1c7347;
   --red: #b3261e;
   --pencil: #626a78;
+  --cover: #1b2a4a;
   --cover-text: #d9e1ef;
+  --on-ink: #ffffff;
+  --ink-hover: #2a3d68;
+  --stop: #b3261e;
+  --stop-hover: #98201a;
+  --danger-wash: #fbeceb;
+  --field-border: #8f9aa8;
+  --dashed: #9aa7a0;
+  --shade: rgb(27 42 74 / 0.45);
   --radius: 4px;
+  color-scheme: light dark;
   font-family: "IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
   background: var(--paper);
+}
+
+/* Dark: the same ledger after hours. The cover stays navy; the pages turn to night paper. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #121a2b;
+    --surface: #19233a;
+    --bar: #1d2d34;
+    --ink: #e2e8f3;
+    --muted: #9ba6bc;
+    --rule: #2e3b55;
+    --blue: #93acff;
+    --green: #6fcf98;
+    --red: #ff8d84;
+    --pencil: #a6adbb;
+    --cover: #0d1322;
+    --on-ink: #121a2b;
+    --ink-hover: #c3cde0;
+    --stop: #c9372d;
+    --stop-hover: #a92b22;
+    --danger-wash: #3a2024;
+    --field-border: #56637d;
+    --dashed: #4e5c78;
+    --shade: rgb(5 8 16 / 0.7);
+  }
 }
 
 *,
@@ -111,7 +146,7 @@ main:focus {
 }
 
 .cover {
-  background: var(--ink);
+  background: var(--cover);
   color: var(--cover-text);
   display: flex;
   flex-direction: column;
@@ -157,6 +192,10 @@ main:focus {
 
 .cover :focus-visible {
   outline-color: #9fd3b0;
+}
+
+.cover nav a:focus-visible {
+  outline-offset: -2px;
 }
 
 .signout {
@@ -271,21 +310,21 @@ main {
 
 .btn-primary {
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
 }
 
 .btn-primary:hover {
-  background: #2a3d68;
+  background: var(--ink-hover);
 }
 
 .btn-stop {
-  background: var(--red);
-  border-color: var(--red);
+  background: var(--stop);
+  border-color: var(--stop);
   color: #fff;
 }
 
 .btn-stop:hover {
-  background: #98201a;
+  background: var(--stop-hover);
 }
 
 .btn-danger {
@@ -296,7 +335,7 @@ main {
 }
 
 .btn-danger:hover {
-  background: #fbeceb;
+  background: var(--danger-wash);
 }
 
 .btn:disabled {
@@ -321,7 +360,7 @@ textarea {
   font: inherit;
   color: inherit;
   background: var(--surface);
-  border: 1px solid #8f9aa8;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius);
   padding: 0.42rem 0.6rem;
   width: 100%;
@@ -473,7 +512,7 @@ fieldset {
 
 .empty {
   background: var(--surface);
-  border: 1px dashed #9aa7a0;
+  border: 1px dashed var(--dashed);
   border-radius: var(--radius);
   padding: 1.5rem;
   margin-bottom: 1.25rem;
@@ -517,7 +556,7 @@ fieldset {
 
 .segmented button[aria-pressed="true"] {
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
 }
 
 .segmented button:focus-visible {
@@ -525,7 +564,7 @@ fieldset {
 }
 
 .segmented button[aria-pressed="true"]:focus-visible {
-  outline-color: #9fd3b0;
+  outline-color: var(--on-ink);
 }
 
 .count {
@@ -1064,11 +1103,12 @@ dialog {
   padding: 1.5rem;
   width: min(30rem, calc(100vw - 2rem));
   color: var(--ink);
-  box-shadow: 0 18px 50px rgb(27 42 74 / 0.28);
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgb(5 8 16 / 0.3);
 }
 
 dialog::backdrop {
-  background: rgb(27 42 74 / 0.45);
+  background: var(--shade);
 }
 
 dialog h2 {
@@ -1083,7 +1123,7 @@ dialog h2 {
   max-width: none;
   display: grid;
   place-items: center;
-  background: var(--ink);
+  background: var(--cover);
   padding: 1.5rem;
 }
 
@@ -1171,6 +1211,16 @@ dialog h2 {
     padding: 1.25rem 1rem 3rem;
   }
 
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .stamp {
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    padding: 0.4rem 0.6rem 0.35rem;
+  }
+
   .dash-grid,
   .week {
     grid-template-columns: minmax(0, 1fr);
@@ -1197,14 +1247,26 @@ dialog h2 {
     padding: 1rem;
   }
 
-  /* wide tables scroll inside themselves instead of stretching the page */
-  .ledger {
-    display: block;
+  /* a table that is still too wide scrolls inside its box instead of stretching the page */
+  .panel,
+  .client,
+  .sheet {
     overflow-x: auto;
   }
 
   .ledger .grow {
     min-width: 7rem;
+  }
+
+  .segmented {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .segmented button {
+    flex: 1 0 auto;
+    padding: 0.4rem 0.6rem;
   }
 
   .client .ledger {
@@ -1221,9 +1283,16 @@ dialog h2 {
     width: auto;
   }
 
-  /* the time log is read on phones: let names wrap so Edit stays on screen */
-  .day .ledger th {
+  /* names wrap on phones so amounts and Edit stay on screen */
+  .client .ledger tbody th,
+  .top-clients th {
     white-space: normal;
+  }
+
+  .lines th,
+  .lines td {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
   }
 
   .day .ledger th,
@@ -1235,6 +1304,128 @@ dialog h2 {
   .lines.editing td:first-child input {
     min-width: 11rem;
   }
+}
+
+/* ---------- phones: the widest ledgers become stacked rows ---------- */
+
+@media (max-width: 600px) {
+  .stacks thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .stacks,
+  .stacks tbody {
+    display: block;
+  }
+
+  .stacks tr {
+    display: grid;
+    gap: 0.15rem 0.75rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .stacks.ledger th,
+  .stacks.ledger td {
+    padding: 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .stacks .tag-cell:empty {
+    display: none;
+  }
+
+  .stacks .small {
+    font-size: 0.87rem;
+    color: var(--muted);
+  }
+
+  /* invoices: number and total, client and status, then the dates */
+  .invoices tr {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "number total" "client status" "issued due";
+  }
+
+  .invoices tr > :nth-child(1) { grid-area: number; }
+  .invoices tr > :nth-child(2) { grid-area: client; white-space: normal; }
+  .invoices tr > :nth-child(3) { grid-area: issued; }
+  .invoices tr > :nth-child(4) { grid-area: due; text-align: right; }
+  .invoices tr > :nth-child(5) { grid-area: status; text-align: right; }
+  .invoices tr > :nth-child(6) { grid-area: total; font-weight: 600; }
+
+  .invoices tr > :nth-child(3)::before { content: "Issued "; }
+  .invoices tr > :nth-child(4)::before { content: "Due "; }
+
+  /* time log: project and duration, then what was done */
+  .day .stacks tr {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "project time edit" "what what what" "tag tag tag";
+  }
+
+  .day .stacks tr > :nth-child(1) { grid-area: project; white-space: normal; }
+  .day .stacks tr > :nth-child(2) { grid-area: what; }
+  .day .stacks tr > :nth-child(3) { grid-area: tag; }
+  .day .stacks tr > :nth-child(4) { grid-area: time; }
+  .day .stacks tr > :nth-child(5) { grid-area: edit; }
+
+  .day .stacks .sub {
+    display: inline;
+    margin-left: 0.4rem;
+  }
+
+  /* unbilled time on a new invoice: the checkbox, then the entry */
+  .pick tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "box project time" "box date date" "box what what";
+  }
+
+  .pick tr > :nth-child(1) { grid-area: box; padding-top: 0.15rem; }
+  .pick tr > :nth-child(2) { grid-area: date; }
+  .pick tr > :nth-child(3) { grid-area: project; font-weight: 500; }
+  .pick tr > :nth-child(4) { grid-area: what; }
+  .pick tr > :nth-child(5) { grid-area: time; }
+
+  /* line editor: description across, numbers below */
+  .lines.editing.stacks tr {
+    grid-template-columns: 5rem minmax(0, 1fr) auto;
+    grid-template-areas: "desc desc desc" "qty price amount" "remove remove remove";
+    gap: 0.4rem 0.6rem;
+    padding: 0.75rem;
+  }
+
+  .lines.editing.stacks td {
+    padding: 0;
+  }
+
+  .lines.editing.stacks tr > :nth-child(1) { grid-area: desc; }
+  .lines.editing.stacks tr > :nth-child(2) { grid-area: qty; }
+  .lines.editing.stacks tr > :nth-child(3) { grid-area: price; }
+  .lines.editing.stacks tr > :nth-child(4) { grid-area: amount; align-self: end; padding-bottom: 0.55rem; }
+  .lines.editing.stacks tr > :nth-child(5) { grid-area: remove; text-align: left; }
+
+  .lines.editing.stacks td:nth-child(n + 2) input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lines.editing.stacks td:first-child input {
+    min-width: 0;
+  }
+
+  .lines.editing.stacks td:nth-child(2)::before,
+  .lines.editing.stacks td:nth-child(3)::before {
+    display: block;
+    text-align: left;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .lines.editing.stacks td:nth-child(2)::before { content: "Qty"; }
+  .lines.editing.stacks td:nth-child(3)::before { content: "Unit price"; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

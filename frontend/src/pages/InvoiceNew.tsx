@@ -83,7 +83,7 @@ export default function InvoiceNew() {
             lines.
           </p>
         ) : (
-          <table className="ledger">
+          <table className="ledger pick stacks">
             <thead>
               <tr>
                 <th scope="col">
@@ -106,7 +106,7 @@ export default function InvoiceNew() {
                       onChange={() => toggle(entry.id)}
                     />
                   </td>
-                  <td>{formatDate(entry.date)}</td>
+                  <td className="small">{formatDate(entry.date)}</td>
                   <td>{entry.project_name}</td>
                   <td className="grow">{entry.description}</td>
                   <td className="num">{formatDuration(entry.minutes)}</td>
