@@ -6,6 +6,23 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed (round 5, reliability lens)
+
+Found by feeding the API odd input; each has a failing test first.
+
+- An invoice issue date of 9999-12-31 (issue date plus payment terms overflows Python's dates)
+  answered 500. Dates on invoices, time entries and `paid_on` must now be within 1970-2100,
+  otherwise 422 (`tests/test_invoices.py`).
+- A lone surrogate in JSON text (valid JSON, not valid UTF-8) answered 500 on login and on every
+  text field, and an id beyond SQLite's 64-bit range (for example `client_id` 10^30) answered
+  500. Both are now 422. Validation errors no longer echo the offending input back
+  (`tests/test_clients_time.py`).
+- Probed and fine: Unicode, emoji, CJK and right-to-left text in PDFs (glyphs DejaVu lacks are
+  skipped, not an error), 500-character unbroken words, 200 lines at maximum price (total stays
+  below 2^53), malformed and non-object JSON, negative or non-numeric limits.
+- The previous round's reported gaps (no voided-on date, no partial credit notes) are features,
+  not bugs, and remain undone; a voided-on date needs a migration mechanism first.
+
 ### Added (round 4, feature lens)
 
 - Void a sent or overdue invoice. Before, a sent invoice with a mistake had no way out: it
