@@ -6,6 +6,33 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security (round 11, security lens)
+
+Reviewed the whole repo by hand, then with a read-only Codex review; every fix was reproduced
+against a running server first and has a regression test in `tests/test_auth.py`.
+
+- Unauthenticated memory exhaustion: FastAPI reads and parses the whole request body before
+  it checks the session, so one 400 MB POST without a cookie raised the server's memory from
+  117 MB to 520 MB, and it stayed there. Parsed JSON costs about 25 times its size, and a
+  body with many unknown keys answers with one 422 error per key (Codex: a 539 KB login body
+  cost 67 MB). Bodies are now refused with 413 before they are read: 16 KB without a valid
+  session, 32 MB with one (a full 5,000,000-character Toggl import fits). Chunked bodies are
+  counted as they arrive. This replaces round 3's "no request body size limit, accepted".
+- `/api/docs` loaded Swagger UI as `swagger-ui-dist@5` from jsDelivr, so whatever 5.x was
+  published last ran on the app's own origin, where it can read the CSRF token and act as
+  you. It is now pinned to 5.34.1 with SRI hashes (checked against the npm tarball and the
+  CDN copy; the page renders all 33 operations in Chromium). The favicon no longer comes from
+  fastapi.tiangolo.com.
+- CI now runs `pip-audit` on the installed Python dependencies next to `npm audit`.
+- Checked and fine: `npm audit` and `pip-audit` report nothing; git history has no secrets or
+  databases and only the noreply identity; CI has `contents: read`, SHA-pinned actions and no
+  persisted token; the container runs as a non-root user and compose binds to 127.0.0.1; SQL
+  is SQLModel expressions only; no outbound requests (no SSRF); CSV cells are formula-escaped;
+  PDF and CSV filenames are built from validated characters; React renders all text escaped.
+- Not done: Python dependencies and Docker base images are not pinned (no lock file, tags not
+  digests), so builds take the newest compatible versions. Reported gaps unchanged: Toggl
+  parser untested on a real export; credit notes, voided-on date and homepage not done.
+
 ### Changed (round 10, design lens)
 
 Screenshotted every page of the running app (seeded and empty database) at 1280 px and

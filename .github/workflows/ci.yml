@@ -33,6 +33,10 @@ jobs:
         run: npm audit --audit-level=high
       - name: Lint (ruff)
         run: make lint
+      - name: Audit Python dependencies for known vulnerabilities
+        run: |
+          .venv/bin/pip install --quiet pip-audit
+          .venv/bin/pip-audit --skip-editable
       - name: Unit and API tests, typecheck
         run: make test
       - name: Install Chromium for Playwright
