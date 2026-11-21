@@ -17,7 +17,9 @@ against a running server first and has a regression test in `tests/test_auth.py`
   body with many unknown keys answers with one 422 error per key (Codex: a 539 KB login body
   cost 67 MB). Bodies are now refused with 413 before they are read: 16 KB without a valid
   session, 32 MB with one (a full 5,000,000-character Toggl import fits). Chunked bodies are
-  counted as they arrive. This replaces round 3's "no request body size limit, accepted".
+  counted as they arrive. The session is looked up only for bodies past 16 KB, in the thread
+  pool: a first version looked it up on every write in the event loop and deadlocked on
+  SQLite's write lock in CI. This replaces round 3's "no request body size limit, accepted".
 - `/api/docs` loaded Swagger UI as `swagger-ui-dist@5` from jsDelivr, so whatever 5.x was
   published last ran on the app's own origin, where it can read the CSRF token and act as
   you. It is now pinned to 5.34.1 with SRI hashes (checked against the npm tarball and the
