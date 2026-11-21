@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import secrets
+import threading
 import time
 from collections import deque
 
@@ -41,30 +42,30 @@ class LoginLimiter:
         self.max_failures = max_failures
         self.window = window
         self.clock = clock
-        self._failures: dict[str, deque[float]] = {}
+        self._lock = threading.Lock()
+        self._attempts: dict[str, deque[float]] = {}
 
-    def retry_after(self, key: str) -> int:
-        """Seconds the caller must wait, or 0 if an attempt is allowed."""
+    def claim(self, key: str) -> int:
+        """Take one attempt for `key`. Returns 0, or the seconds to wait if none are left.
+
+        The attempt is counted before the password is checked, so a burst of parallel
+        guesses cannot all slip past the limit. A successful login gives it back via reset().
+        """
         now = self.clock()
-        attempts = self._failures.get(key)
-        if not attempts:
+        with self._lock:
+            if len(self._attempts) > 10_000:  # bound memory under a spray of source addresses
+                self._attempts.clear()
+            attempts = self._attempts.setdefault(key, deque())
+            while attempts and now - attempts[0] >= self.window:
+                attempts.popleft()
+            if len(attempts) >= self.max_failures:
+                return max(1, int(attempts[0] + self.window - now))
+            attempts.append(now)
             return 0
-        while attempts and now - attempts[0] >= self.window:
-            attempts.popleft()
-        if not attempts:
-            del self._failures[key]
-            return 0
-        if len(attempts) < self.max_failures:
-            return 0
-        return max(1, int(attempts[0] + self.window - now))
-
-    def record_failure(self, key: str) -> None:
-        if len(self._failures) > 10_000:  # bound memory under a spray of source addresses
-            self._failures.clear()
-        self._failures.setdefault(key, deque()).append(self.clock())
 
     def reset(self, key: str) -> None:
-        self._failures.pop(key, None)
+        with self._lock:
+            self._attempts.pop(key, None)
 
 
 if __name__ == "__main__":

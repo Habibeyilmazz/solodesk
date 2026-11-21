@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from solodesk.auth import LoginLimiter, hash_password, verify_password
 
 from .conftest import PASSWORD
+from .test_concurrency import together
 
 
 def test_password_hash_roundtrip():
@@ -17,15 +18,14 @@ def test_password_hash_roundtrip():
 def test_limiter_blocks_after_max_failures_then_recovers():
     now = [0.0]
     limiter = LoginLimiter(max_failures=3, window=60, clock=lambda: now[0])
-    for _ in range(3):
-        assert limiter.retry_after("a") == 0
-        limiter.record_failure("a")
-    assert limiter.retry_after("a") == 60
-    assert limiter.retry_after("b") == 0  # other addresses are unaffected
+    assert [limiter.claim("a") for _ in range(4)] == [0, 0, 0, 60]
+    assert limiter.claim("b") == 0  # other addresses are unaffected
     now[0] = 59
-    assert limiter.retry_after("a") == 1
+    assert limiter.claim("a") == 1
     now[0] = 60
-    assert limiter.retry_after("a") == 0
+    assert limiter.claim("a") == 0  # the window has passed
+    limiter.reset("a")
+    assert [limiter.claim("a") for _ in range(4)] == [0, 0, 0, 60]  # reset gives all three back
 
 
 def test_api_requires_login(anon):
@@ -71,6 +71,16 @@ def test_login_is_rate_limited(anon):
     blocked = anon.post("/api/auth/login", json={"password": PASSWORD})  # even the right one
     assert blocked.status_code == 429
     assert int(blocked.headers["retry-after"]) > 0
+
+
+def test_parallel_guesses_cannot_outrun_the_limit(anon):
+    codes = together(10, lambda _: anon.post("/api/auth/login", json={"password": "x"}).status_code)
+    assert sorted(codes) == [401] * 5 + [429] * 5
+
+
+def test_successful_logins_do_not_use_up_attempts(anon):
+    for _ in range(8):
+        assert anon.post("/api/auth/login", json={"password": PASSWORD}).status_code == 200
 
 
 def test_security_headers(anon):

@@ -17,14 +17,13 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     limiter = request.app.state.login_limiter
     config = request.app.state.config
     who = request.client.host if request.client else "unknown"
-    if wait := limiter.retry_after(who):
+    if wait := limiter.claim(who):
         raise HTTPException(
             429,
             f"Too many failed attempts. Try again in {wait // 60 + 1} minutes.",
             headers={"Retry-After": str(wait)},
         )
     if not verify_password(body.password, config.password_hash):
-        limiter.record_failure(who)
         raise HTTPException(401, "Wrong password")
     limiter.reset(who)
 
