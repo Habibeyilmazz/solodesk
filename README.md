@@ -8,7 +8,7 @@ with your books in a single SQLite file that never leaves it.
 
 ## Quickstart
 
-You need Python 3.12+, Node 22+ and `make`.
+You need Python 3.12+, Node 22.12+ (22.18+ for `make test`) and `make`.
 
 ```sh
 git clone https://github.com/Habibeyilmazz/solodesk.git
@@ -22,7 +22,8 @@ The first run copies `.env.example` to `.env`. Sign in with the password in that
 start solodesk again: that also signs out every session opened with the old password. Then
 fill in your business details under Settings; they are the header of every invoice.
 
-If `python3` on your machine is older than 3.12, name a newer one: `make run PYTHON=python3.12`.
+If `python3` on your machine is older than 3.12 (macOS ships 3.9), `make` stops and says so.
+Name a newer one: `make run PYTHON=python3.12`.
 
 With Docker instead:
 
