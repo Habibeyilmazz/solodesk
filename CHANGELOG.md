@@ -6,6 +6,21 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added (round 12, feature lens)
+
+- **Copy to new draft** on sent, paid and void invoices. Chosen by walking through a month of
+  use: a fixed monthly retainer, or reissuing a voided invoice, meant retyping every line by
+  hand, and recurring invoices are on the roadmap. The copy is a draft for the same client
+  with the fixed lines, tax rate, discount, notes and the source's currency (so copied prices
+  stay correct if the client's currency changed since), dated today with the current payment
+  terms. Lines built from tracked time are left out, since their hours stay billed on the
+  original; **Add tracked time** bills new hours on the copy. No schema change.
+  API: `POST /api/invoices/{id}/copy` (201, the new draft; works from any status).
+  Tests in `tests/test_invoices.py` and `e2e/2-housekeeping.spec.ts` (void, copy, add time).
+- Not done: true recurring invoices (created on a schedule) and copying from a draft in the
+  UI (the API allows it). Reported gaps unchanged: Python dependencies and Docker base images
+  unpinned; Toggl parser untested on a real export; credit notes, voided-on date, homepage.
+
 ### Security (round 11, security lens)
 
 Reviewed the whole repo by hand, then with a read-only Codex review; every fix was reproduced

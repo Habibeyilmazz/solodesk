@@ -58,6 +58,11 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
   stays in the list, the CSV and its PDF marked void. It stops counting as unpaid or overdue
   on the dashboard, and its tracked time becomes unbilled again, ready for a corrected
   invoice. Voiding is final; a paid invoice has to be marked unpaid first.
+- **Copy to a new draft.** Any sent, paid or void invoice can be copied into a new draft for
+  the same client: a monthly retainer is one click, and a voided invoice is reissued without
+  retyping it. The copy keeps the fixed lines, tax, discount, notes and currency, is dated
+  today with your current payment terms, and leaves out lines built from tracked time (those
+  hours are already billed); add new time to it with **Add tracked time**.
 - **PDF export** with your business details, the client's, and Turkish characters and ₺ intact
   ([sample](docs/sample-invoice.pdf)). The bundled font has no Chinese, Japanese or Korean
   glyphs, so text in those scripts will not print.
