@@ -1,7 +1,8 @@
 """The solodesk application: JSON API under /api, the built React app everywhere else."""
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
@@ -32,6 +33,19 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.config = config
     app.state.engine = make_engine(config.db_path)
     app.state.login_limiter = LoginLimiter()
+
+    # Two inputs valid as JSON but impossible to store: a lone surrogate in text, an id beyond
+    # SQLite's 64 bits. Both were a 500. Validation errors also stop echoing the input back,
+    # since a surrogate in it cannot be encoded into the 422 response itself.
+    @app.exception_handler(RequestValidationError)
+    def invalid_request(_request, exc: RequestValidationError):
+        detail = [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]
+        return JSONResponse({"detail": detail}, 422)
+
+    @app.exception_handler(UnicodeEncodeError)
+    @app.exception_handler(OverflowError)
+    def unstorable(_request, _exc):
+        return JSONResponse({"detail": "That value cannot be stored."}, 422)
 
     @app.middleware("http")
     async def security_headers(request, call_next):

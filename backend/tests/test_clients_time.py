@@ -99,3 +99,28 @@ def test_timer_refuses_archived_project(api, acme):
     pid = acme["project"]["id"]
     api.put(f"/api/projects/{pid}", json={"name": "Website", "archived": True})
     assert api.post("/api/timer/start", json={"project_id": pid}).status_code == 409
+
+
+JSON = {"content-type": "application/json"}
+
+
+def test_text_that_cannot_be_stored_is_a_422_not_a_server_error(api, anon):
+    # a lone surrogate is valid JSON but cannot be encoded as UTF-8
+    assert api.post("/api/clients", content=b'{"name": "\\ud800"}', headers=JSON).status_code == 422
+    login = anon.post("/api/auth/login", content=b'{"password": "\\ud800x"}', headers=JSON)
+    assert login.status_code == 422
+
+
+def test_an_id_too_big_for_sqlite_is_a_404_or_422(api):
+    huge = 10**30
+    assert api.post("/api/projects", json={"client_id": huge, "name": "p"}).status_code in (
+        404,
+        422,
+    )
+    assert api.get(f"/api/invoices/{huge}").status_code in (404, 422)
+    assert api.post("/api/invoices", json={"client_id": huge}).status_code in (404, 422)
+    assert api.post(
+        "/api/time", json={"project_id": huge, "date": "2026-01-01", "minutes": 5}
+    ).status_code in (404, 422)
+    assert api.post("/api/timer/start", json={"project_id": huge}).status_code in (404, 422)
+    assert api.get(f"/api/time?project_id={huge}").status_code == 200
