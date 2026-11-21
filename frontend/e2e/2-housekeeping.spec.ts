@@ -27,7 +27,20 @@ test("change settings, fix mistakes and undo things", async ({ page }) => {
   // create and rename a client
   await page.getByRole("link", { name: "Clients", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await page.getByRole("button", { name: "New client" }).click();
+  const newClient = page.getByRole("button", { name: "New client" });
+  await newClient.click();
+  await expect(dialog.getByLabel("Name")).toBeFocused();
+  for (const close of [
+    () => page.keyboard.press("Escape"),
+    () => dialog.getByRole("button", { name: "Cancel" }).click(),
+  ]) {
+    await close(); // either way, focus goes back to where it came from
+    await expect(dialog).toHaveCount(0);
+    await expect(newClient).toBeFocused();
+    await newClient.click();
+  }
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await newClient.click();
   await dialog.getByLabel("Name").fill("Beta Ltd");
   await dialog.getByLabel("Invoice currency").selectOption("GBP");
   await dialog.getByRole("button", { name: "Add client" }).click();

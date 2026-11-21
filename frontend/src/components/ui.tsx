@@ -4,10 +4,14 @@ import type { InvoiceStatus } from "../api.ts";
 /** A modal built on the native <dialog>: focus trapping and Escape come from the browser. */
 export function Dialog(props: { title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // read during render: by the time effects run, an autofocused field inside has the focus
+  const opener = useRef(document.activeElement);
   const titleId = useId();
   useEffect(() => {
     const dialog = ref.current!;
     if (!dialog.open) dialog.showModal();
+    // the dialog is unmounted rather than closed, so hand focus back ourselves
+    return () => (opener.current as HTMLElement | null)?.focus();
   }, []);
   return (
     <dialog ref={ref} aria-labelledby={titleId} onClose={props.onClose}>
