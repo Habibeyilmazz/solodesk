@@ -2,8 +2,9 @@
 PYTHON ?= python3
 VENV := .venv
 BIN := $(VENV)/bin
-# Put the variables from .env into the environment of a recipe.
-ENV := set -a; . ./.env; set +a;
+# Run a command with the variables from .env. The file is parsed as data (python-dotenv),
+# never by the shell, so a password with spaces, $ or & is just a password.
+ENV := $(BIN)/dotenv run --
 
 .PHONY: dev run build seed test lint e2e
 
@@ -22,8 +23,8 @@ frontend/node_modules: frontend/package-lock.json
 
 ## dev: API with reload on :4150 and the UI with hot reload on http://localhost:4151
 dev: $(VENV) frontend/node_modules .env
-	@$(ENV) trap 'kill 0' INT TERM EXIT; \
-	$(BIN)/uvicorn solodesk.main:create_app --factory --reload --reload-dir backend --port 4150 & \
+	@trap 'kill 0' INT TERM EXIT; \
+	$(ENV) $(BIN)/uvicorn solodesk.main:create_app --factory --reload --reload-dir backend --port 4150 & \
 	(cd frontend && npm run dev) & \
 	wait
 

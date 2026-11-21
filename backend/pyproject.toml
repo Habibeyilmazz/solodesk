@@ -12,7 +12,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=9", "httpx2>=2.16", "ruff>=0.17"]
+# python-dotenv is what the Makefile uses to read .env
+dev = ["pytest>=9", "httpx2>=2.16", "ruff>=0.17", "python-dotenv[cli]>=1.0"]
 
 [build-system]
 requires = ["setuptools>=77"]
