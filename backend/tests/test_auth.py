@@ -160,3 +160,19 @@ def test_built_assets_are_cached_and_compressed(tmp_path):
         assert client.get("/").headers["cache-control"] == "no-cache"
         api = client.get("/api/health", headers={"Accept-Encoding": "gzip"})
         assert "content-encoding" not in api.headers
+
+
+def test_oversized_bodies_are_refused_before_sign_in(anon):
+    from solodesk.main import MAX_BODY_BYTES
+
+    big = b"x" * (MAX_BODY_BYTES + 1)
+    assert anon.post("/api/clients", content=big).status_code == 413
+    assert anon.post("/api/auth/login", content=big).status_code == 413
+
+    def chunked():  # no Content-Length, so the limit has to count while reading
+        for _ in range(MAX_BODY_BYTES // 2**20 + 1):
+            yield b"x" * 2**20
+
+    assert anon.post("/api/auth/login", content=chunked()).status_code == 413
+    # a body under the limit still reaches the endpoint
+    assert anon.post("/api/auth/login", json={"password": "wrong-pass"}).status_code == 401

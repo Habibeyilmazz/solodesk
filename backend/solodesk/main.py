@@ -17,6 +17,38 @@ CSP = (
     "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
     "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 )
+# The largest valid body is a Toggl import: 5,000,000 characters, as UTF-8 and JSON-escaped.
+MAX_BODY_BYTES = 32 * 1024 * 1024
+
+
+class BodyLimit:
+    """Refuse request bodies over `limit` bytes before they are read into memory.
+
+    FastAPI reads the whole body before checking the session, so without this anyone who
+    can reach the port could make the process hold gigabytes with one request.
+    """
+
+    def __init__(self, app, limit: int = MAX_BODY_BYTES):
+        self.app, self.limit = app, limit
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        length = dict(scope["headers"]).get(b"content-length", b"")
+        if length.isdigit() and int(length) > self.limit:
+            response = JSONResponse({"detail": "Request body too large"}, 413)
+            return await response(scope, receive, send)
+        received = 0
+
+        async def counted_receive():  # a chunked body has no Content-Length to check up front
+            nonlocal received
+            message = await receive()
+            received += len(message.get("body", b""))
+            if received > self.limit:
+                raise HTTPException(413, "Request body too large")
+            return message
+
+        await self.app(scope, counted_receive, send)
 
 
 def create_app(config: Config | None = None) -> FastAPI:
@@ -34,6 +66,7 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.config = config
     app.state.engine = make_engine(config.db_path)
     app.state.login_limiter = LoginLimiter()
+    app.add_middleware(BodyLimit)
 
     # Two inputs valid as JSON but impossible to store: a lone surrogate in text, an id beyond
     # SQLite's 64 bits. Both were a 500. Validation errors also stop echoing the input back,
