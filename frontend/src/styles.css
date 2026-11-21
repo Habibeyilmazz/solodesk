@@ -841,6 +841,35 @@ a.tag {
   white-space: nowrap;
 }
 
+/* each day is its own table; fixed widths line the columns up from one day to the next */
+@media (min-width: 601px) {
+  .day .ledger {
+    table-layout: fixed;
+  }
+
+  .day .ledger tbody th {
+    width: 13rem;
+    white-space: normal;
+  }
+
+  .day .ledger .grow {
+    width: auto;
+  }
+
+  .day .ledger .tag-cell {
+    width: 7.5rem;
+    text-align: right;
+  }
+
+  .day .ledger .num {
+    width: 5.5rem;
+  }
+
+  .day .ledger .row-actions {
+    width: 3.5rem;
+  }
+}
+
 .more {
   margin-top: 1.5rem;
 }
@@ -1317,6 +1346,40 @@ dialog h2 {
 /* ---------- phones: the widest ledgers become stacked rows ---------- */
 
 @media (max-width: 600px) {
+  /* top clients: name and amount on one line, the share bar full width under them */
+  .top-clients,
+  .top-clients tbody {
+    display: block;
+  }
+
+  .top-clients tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.75rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .top-clients.ledger th,
+  .top-clients.ledger td {
+    padding: 0;
+    width: auto;
+  }
+
+  .top-clients .share {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  /* "4h 30m" fits on one line above a phone-width bar */
+  .week-bars {
+    column-gap: 0.25rem;
+  }
+
+  .week-value {
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
   .stacks thead {
     position: absolute;
     width: 1px;
