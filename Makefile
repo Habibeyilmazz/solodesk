@@ -1,4 +1,4 @@
-# solodesk: `make dev` is all you need. It installs what is missing, then starts the app.
+# solodesk: `make run` is all you need. It installs what is missing, then starts the app.
 PYTHON ?= python3
 VENV := .venv
 BIN := $(VENV)/bin
@@ -6,11 +6,17 @@ BIN := $(VENV)/bin
 # never by the shell, so a password with spaces, $ or & is just a password.
 ENV := $(BIN)/dotenv run --
 
+.DEFAULT_GOAL := run
 .PHONY: dev run build seed test lint e2e
 
+# A failed install removes the half-made venv, so the next try with PYTHON=... starts clean.
 $(VENV): backend/pyproject.toml
+	@$(PYTHON) -c 'import sys; sys.exit(sys.version_info < (3, 12))' 2>/dev/null || { \
+	  echo "solodesk needs Python 3.12 or newer, and '$(PYTHON)' is older or missing."; \
+	  echo "Name a newer one, for example: make $(or $(MAKECMDGOALS),run) PYTHON=python3.12"; \
+	  exit 1; }
 	$(PYTHON) -m venv $(VENV)
-	$(BIN)/pip install --quiet -e "backend[dev]"
+	$(BIN)/pip install --quiet -e "backend[dev]" || { rm -rf $(VENV); exit 1; }
 	@touch $(VENV)
 
 frontend/node_modules: frontend/package-lock.json
