@@ -16,6 +16,12 @@ test("change settings, fix mistakes and undo things", async ({ page }) => {
   // settings persist
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByLabel("Business name").fill("Mavi Fener Studio");
+  const prefix = page.getByLabel("Number prefix");
+  await prefix.fill("INV 2026!"); // the form itself refuses characters the server would reject
+  expect(await prefix.evaluate((el: HTMLInputElement) => el.validity.patternMismatch)).toBe(true);
+  await prefix.fill("INV/");
+  expect(await prefix.evaluate((el: HTMLInputElement) => el.validity.valid)).toBe(true);
+  await prefix.fill("INV-");
   await page.getByLabel("Default tax %").fill("18,5");
   await page.getByLabel("Payment terms (days)").fill("30");
   await page.getByRole("button", { name: "Save settings" }).click();

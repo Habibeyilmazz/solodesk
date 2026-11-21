@@ -83,7 +83,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
             value={form.invoice_prefix}
             onChange={set("invoice_prefix")}
             maxLength={20}
-            pattern="[A-Za-z0-9/_\-]*"
+            // "/" is escaped because browsers compile this with the v flag and silently drop
+            // a pattern that does not compile
+            pattern="[A-Za-z0-9\/_\-]*"
           />
         </Field>
         <Field label="Next number">
