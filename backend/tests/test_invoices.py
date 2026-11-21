@@ -487,3 +487,18 @@ def test_copying_an_invoice_to_a_new_draft(api, acme):
     # works from void and draft invoices too, and on a missing one answers 404
     assert api.post(f"/api/invoices/{copy['id']}/copy").status_code == 201
     assert api.post("/api/invoices/999/copy").status_code == 404
+
+
+def test_paid_on_cannot_be_in_the_future(api, acme):
+    # a future month is outside the dashboard's 12 months, so the payment would vanish from it
+    invoice = make_invoice(api, acme["client"]["id"])
+    mark(api, invoice["id"], "sent")
+    tomorrow = dt.date.today() + dt.timedelta(days=1)  # one day of slack for the browser's zone
+    assert mark(api, invoice["id"], "paid", paid_on="2099-01-01").status_code == 422
+    assert (
+        mark(
+            api, invoice["id"], "paid", paid_on=(tomorrow + dt.timedelta(days=1)).isoformat()
+        ).status_code
+        == 422
+    )
+    assert mark(api, invoice["id"], "paid", paid_on=tomorrow.isoformat()).status_code == 200

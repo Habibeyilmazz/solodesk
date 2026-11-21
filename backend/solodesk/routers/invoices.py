@@ -315,6 +315,9 @@ def set_status(invoice_id: int, body: StatusIn, db: Session = Depends(get_db)) -
     invoice = get_or_404(db, Invoice, invoice_id)
     if (invoice.status, body.status) not in TRANSITIONS:
         raise HTTPException(409, f"A {invoice.status} invoice cannot be marked {body.status}.")
+    if body.status == "paid" and body.paid_on and body.paid_on > today() + dt.timedelta(days=1):
+        # a future month would fall outside the dashboard; one day of slack for time zones
+        raise HTTPException(422, "The payment date cannot be in the future.")
     if invoice.status == "draft":
         if not get_lines(db, invoice_id):
             raise HTTPException(409, "Add at least one line before sending.")

@@ -88,3 +88,11 @@ def test_bad_files_are_refused_with_reasons(api):
 
 def test_import_needs_sign_in(anon):
     assert anon.post("/api/import/toggl", json={"csv": toggl(row())}).status_code == 401
+
+
+def test_semicolon_separated_files_are_read(api):
+    # Excel in many locales saves a re-opened CSV with semicolons
+    csv = "Client;Project;Description;Start date;Duration\nAcme;Site;a, b;2025-01-02;01:30:00\n"
+    r = api.post("/api/import/toggl", json={"csv": csv})
+    assert r.status_code == 200 and (r.json()["added"], r.json()["minutes"]) == (1, 90)
+    assert api.get("/api/time").json()[0]["description"] == "a, b"

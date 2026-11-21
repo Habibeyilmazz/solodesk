@@ -43,7 +43,10 @@ def _date(text: str) -> dt.date:
 
 def parse_toggl(text: str) -> list[dict]:
     """Rows of a Toggl CSV as entry fields. Raises HTTPException 422 listing bad rows."""
-    reader = csv.DictReader(io.StringIO(text.removeprefix("\ufeff")))
+    text = text.removeprefix("\ufeff")
+    header = text.split("\n", 1)[0]
+    delimiter = ";" if header.count(";") > header.count(",") else ","  # Excel in many locales
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
     columns = {name.strip().lower(): name for name in reader.fieldnames or []}
     missing = [c for c in ("project", "start date", "duration") if c not in columns]
     if missing:
