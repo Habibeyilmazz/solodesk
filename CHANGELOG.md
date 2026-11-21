@@ -30,6 +30,8 @@ First release.
   `backend/solodesk/money.py` and `frontend/src/lib/money.ts` must stay in step (both are tested).
 - There are no schema migrations. Tables are created on first start; changing a model means
   adding a migration story first (see Roadmap in the README).
+- Every database transaction starts with `BEGIN IMMEDIATE` (`db.py`), so requests run one at a
+  time and check-then-write rules cannot race. Keep that if you touch the engine setup.
 - The login rate limiter lives in process memory (see the `shortcut:` comment in `auth.py`).
 - `overdue` is never stored; it is computed from `status == "sent"` and the due date.
 - Screenshots in `docs/screenshots` come from `frontend/scripts/screenshots.mjs` run against a

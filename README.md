@@ -50,13 +50,15 @@ docker compose run --rm solodesk python -m solodesk.seed   # optional demo data
 | --- | --- |
 | ![Time entries grouped by day, with a form to add time by hand](docs/screenshots/time.png) | ![An overdue invoice with its lines, totals and an overdue stamp](docs/screenshots/invoice-overdue.png) |
 | ![Clients with their projects, hourly rates and unbilled time](docs/screenshots/clients.png) | ![A draft invoice being edited](docs/screenshots/invoice-draft.png) |
+| ![The invoice list with status filters](docs/screenshots/invoices.png) | <img src="docs/screenshots/phone-dashboard.png" width="250" alt="The dashboard on a phone-sized screen"> |
 
 All screenshots are of the running app with the demo data from `make seed`.
 
 ## How it works
 
 One FastAPI process serves a JSON API under `/api` and the built React app everywhere else.
-Data lives in `data/solodesk.db` (SQLite). Back it up by copying that file.
+Data lives in `data/solodesk.db` (SQLite). Back it up by copying that file while solodesk is
+stopped, or with `sqlite3 data/solodesk.db ".backup copy.db"` while it runs.
 
 ```
 backend/solodesk/   FastAPI app: models, routers, money arithmetic, PDF, seed script
