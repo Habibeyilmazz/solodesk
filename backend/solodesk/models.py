@@ -127,6 +127,8 @@ Text = Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)]
 BasisPoints = Annotated[int, PField(ge=0, le=10_000)]
 # Limits keep any invoice total far below SQLite's 64-bit integers and JavaScript's 2**53.
 Minor = Annotated[int, PField(ge=0, le=10**9)]
+# 9999-12-31 plus payment terms overflows Python's dates, and no real invoice is dated there.
+Day = Annotated[dt.date, PField(ge=dt.date(1970, 1, 1), le=dt.date(2100, 12, 31))]
 
 
 class Body(BaseModel):
@@ -161,7 +163,7 @@ class ProjectUpdate(Body):
 
 class TimeEntryIn(Body):
     project_id: int
-    date: dt.date
+    date: Day
     minutes: Annotated[int, PField(ge=1, le=24 * 60)]
     description: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] = ""
     billable: bool = True
@@ -182,8 +184,8 @@ class LineIn(Body):
 
 
 class InvoiceFields(Body):
-    issue_date: dt.date | None = None  # default: today
-    due_date: dt.date | None = None  # default: issue date + payment terms
+    issue_date: Day | None = None  # default: today
+    due_date: Day | None = None  # default: issue date + payment terms
     tax_rate_bp: BasisPoints | None = None  # default: from settings
     discount_bp: BasisPoints = 0
     notes: Text = ""
@@ -203,7 +205,7 @@ class InvoiceCreate(InvoiceFields):
 
 class StatusIn(Body):
     status: Literal["sent", "paid", "void"]
-    paid_on: dt.date | None = None
+    paid_on: Day | None = None
 
 
 class SettingsIn(Body):

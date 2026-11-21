@@ -356,3 +356,18 @@ def test_a_paid_invoice_must_be_marked_unpaid_before_voiding(api, acme):
     assert mark(api, invoice["id"], "void").status_code == 409
     mark(api, invoice["id"], "sent")
     assert mark(api, invoice["id"], "void").json()["status"] == "void"
+
+
+@pytest.mark.parametrize("day", ["9999-12-31", "0001-01-01", "1969-12-31"])
+def test_dates_outside_a_sane_range_are_refused_not_a_server_error(api, acme, day):
+    # issue date + payment terms used to overflow Python's date range and answer 500
+    client_id = acme["client"]["id"]
+    assert (
+        api.post("/api/invoices", json={"client_id": client_id, "issue_date": day}).status_code
+        == 422
+    )
+    assert (
+        api.post("/api/invoices", json={"client_id": client_id, "due_date": day}).status_code == 422
+    )
+    entry = {"project_id": acme["project"]["id"], "date": day, "minutes": 5}
+    assert api.post("/api/time", json=entry).status_code == 422
