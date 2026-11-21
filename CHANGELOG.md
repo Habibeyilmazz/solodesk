@@ -6,6 +6,27 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed (round 9, first-run lens)
+
+Followed the README quickstart literally in a fresh clone (`make seed`, `make run`, sign in,
+every page, an invoice PDF, `/api/docs`, an empty database, a Toggl import): it all worked.
+Then reviewed the code, with a Codex second opinion; each fix has a test that failed first.
+
+- After a Toggl import the Time page still listed only the last 30 days, so importing older
+  history (the usual case) looked like it had added nothing until you pressed "Show 30 more
+  days" many times. The import now returns `earliest_date` and the page widens its range to
+  it (`tests/test_import.py`, `src/lib/time.test.ts`, `e2e/4-import.spec.ts`).
+- Adding time to a draft summed two rounded quantities on a project's line, so two 1-minute
+  entries billed 0.04 h instead of 0.03 h. The line's minutes are now rounded once, as for a
+  new draft; a quantity edited by hand still just gets the new hours added.
+- Deleting a project named on an invoice line (possible after voiding the invoice and deleting
+  the released time) answered 500. It is now a 409 asking to archive the project.
+- README: CI runs on pushes to `main` and on pull requests, not on every push.
+- Seen and left alone: a draft built from more than about 10,000 hours of one project cannot
+  be re-saved (quantity cap), and the Time page shows at most 5,000 entries per range. The
+  Toggl parser is still untested on a real account export; voided-on date, partial credit
+  notes, social preview and homepage remain undone (features, not bugs).
+
 ### Changed (round 8, performance and accessibility lens)
 
 Measured first, on a database with 200 clients, 600 projects, 30,000 time entries and 5,000

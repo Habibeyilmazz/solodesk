@@ -70,7 +70,8 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
   new projects start at an hourly rate of 0. Entries already in solodesk (same project, date,
   minutes and description) are skipped, so importing an overlapping range twice is safe.
   One unreadable row and nothing is imported; the message names the row. Durations are
-  rounded to whole minutes, and an entry is dated on the day it started.
+  rounded to whole minutes, and an entry is dated on the day it started. Afterwards the Time
+  page lists back to the oldest imported entry.
 - **Single-user sign-in** with a password from the environment.
 - **Light and dark** follow your system setting. On a phone, the invoice list, time log and
   line editor turn into stacked rows instead of scrolling sideways.
@@ -151,7 +152,7 @@ make lint   # ruff
 make e2e    # Playwright tests against the built app (once: cd frontend && npx playwright install chromium)
 ```
 
-CI runs all of these on every push, then builds the Docker image and checks that the
+CI runs all of these on every push to `main` and every pull request, then builds the Docker image and checks that the
 container starts, serves the app, produces an invoice PDF, honours `TZ` and can be backed up
 as described above.
 
