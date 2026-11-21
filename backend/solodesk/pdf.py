@@ -76,6 +76,11 @@ def render_invoice(
         pdf.set_text_color(31, 122, 77)
         pdf.cell(width * 0.4, 5.2, f"Paid {_date(invoice.paid_on)}", align="R")
         pdf.ln()
+    if status == "void":
+        pdf.set_font("DejaVu", "B", 9.5)
+        pdf.set_text_color(180, 35, 24)
+        pdf.cell(width * 0.4, 5.2, "VOID: not payable", align="R")
+        pdf.ln()
     pdf.set_y(max(left_bottom, pdf.get_y()) + 10)
 
     # bill to

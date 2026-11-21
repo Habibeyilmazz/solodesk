@@ -28,7 +28,7 @@ def build_dashboard(db: Session, on: dt.date) -> dict:
     rows = db.exec(select(Invoice, Client.name).join(Client, Invoice.client_id == Client.id)).all()
     by_currency: dict[str, dict] = {}
     for invoice, client_name in rows:
-        if invoice.status == "draft":
+        if invoice.status in ("draft", "void"):
             continue
         bucket = by_currency.setdefault(
             invoice.currency,

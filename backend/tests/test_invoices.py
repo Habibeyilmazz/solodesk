@@ -314,3 +314,45 @@ def test_pdf_of_a_line_with_many_line_breaks(api, acme):
     tall = {**LINE, "description": "x\n" * 249 + "x"}
     invoice = make_invoice(api, acme["client"]["id"], lines=[tall])
     assert api.get(f"/api/invoices/{invoice['id']}/pdf").status_code == 200
+
+
+def test_voiding_a_sent_invoice(app, api, acme):
+    cid = acme["client"]["id"]
+    entry = log_time(api, acme["project"]["id"], 90)
+    body = {"client_id": cid, "time_entry_ids": [entry["id"]], "due_date": "2020-01-15",
+            "issue_date": "2020-01-01"}  # fmt: skip
+    invoice = api.post("/api/invoices", json=body).json()
+    assert mark(api, invoice["id"], "void").status_code == 409  # drafts are deleted, not voided
+    mark(api, invoice["id"], "sent")
+
+    voided = mark(api, invoice["id"], "void")
+    assert voided.status_code == 200, voided.text
+    voided = voided.json()
+    # keeps its number and lines, so the numbering has no gap and the record stays readable
+    assert (voided["status"], voided["number"], voided["paid_on"]) == ("void", "INV-0001", None)
+    assert len(voided["lines"]) == 1 and voided["total_minor"] > 0
+    # its time can be invoiced again
+    unbilled = api.get("/api/time", params={"unbilled": True}).json()
+    assert [e["id"] for e in unbilled] == [entry["id"]]
+    redo = api.post("/api/invoices", json={"client_id": cid, "time_entry_ids": [entry["id"]]})
+    assert redo.status_code == 201
+
+    # final: it cannot be paid, reopened or voided twice, and a draft-only edit stays refused
+    for status in ("paid", "sent", "void"):
+        assert mark(api, invoice["id"], status).status_code == 409
+    assert api.delete(f"/api/invoices/{invoice['id']}").status_code == 409
+    assert api.get(f"/api/invoices/{invoice['id']}/pdf").status_code == 200
+    assert [i["id"] for i in api.get("/api/invoices", params={"status": "void"}).json()] == [
+        invoice["id"]
+    ]
+    csv = api.get("/api/export/invoices.csv").text
+    assert "INV-0001,void," in csv
+
+
+def test_a_paid_invoice_must_be_marked_unpaid_before_voiding(api, acme):
+    invoice = make_invoice(api, acme["client"]["id"])
+    mark(api, invoice["id"], "sent")
+    mark(api, invoice["id"], "paid")
+    assert mark(api, invoice["id"], "void").status_code == 409
+    mark(api, invoice["id"], "sent")
+    assert mark(api, invoice["id"], "void").json()["status"] == "void"

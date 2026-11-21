@@ -49,7 +49,7 @@ class Invoice(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     client_id: int = Field(foreign_key="client.id", index=True)
     number: str | None = Field(default=None, unique=True)  # assigned when sent
-    status: str = "draft"  # draft | sent | paid; "overdue" is derived from due_date
+    status: str = "draft"  # draft | sent | paid | void; "overdue" is derived from due_date
     currency: str
     issue_date: dt.date
     due_date: dt.date
@@ -202,7 +202,7 @@ class InvoiceCreate(InvoiceFields):
 
 
 class StatusIn(Body):
-    status: Literal["sent", "paid"]
+    status: Literal["sent", "paid", "void"]
     paid_on: dt.date | None = None
 
 

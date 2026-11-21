@@ -17,6 +17,7 @@ def test_last_months_crosses_year_boundary():
 def test_dashboard(app, api, acme):
     cid, pid = acme["client"]["id"], acme["project"]["id"]
     usd = api.post("/api/clients", json={"name": "Northwind", "currency": "USD"}).json()
+    eur = api.post("/api/clients", json={"name": "Lumen", "currency": "EUR"}).json()
 
     paid = make_invoice(api, cid, tax_rate_bp=2000, discount_bp=1000, issue_date="2026-02-20")
     mark(api, paid["id"], "sent")
@@ -26,6 +27,10 @@ def test_dashboard(app, api, acme):
     pending = make_invoice(api, usd["id"], tax_rate_bp=0, issue_date="2026-03-09")
     mark(api, pending["id"], "sent")
     make_invoice(api, cid)  # a draft counts for nothing
+    for client_id in (cid, eur["id"]):  # and so does a voided invoice
+        voided = make_invoice(api, client_id, issue_date="2026-02-01", due_date="2026-02-10")
+        mark(api, voided["id"], "sent")
+        mark(api, voided["id"], "void")
 
     log_time(api, pid, 120, "2026-03-09")  # Monday of that week
     log_time(api, pid, 30, "2026-03-11", billable=False)

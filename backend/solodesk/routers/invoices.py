@@ -25,7 +25,8 @@ from ..pdf import render_invoice
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
 # overdue is not stored: it is a sent invoice whose due date has passed
-TRANSITIONS = {("draft", "sent"), ("sent", "paid"), ("paid", "sent")}
+# void is final: its time goes back to unbilled and may be invoiced again elsewhere
+TRANSITIONS = {("draft", "sent"), ("sent", "paid"), ("paid", "sent"), ("sent", "void")}
 
 
 def effective_status(invoice: Invoice, on: dt.date) -> str:
@@ -229,7 +230,11 @@ def update_invoice(invoice_id: int, body: InvoiceFields, db: Session = Depends(g
 
 @router.post("/{invoice_id}/status")
 def set_status(invoice_id: int, body: StatusIn, db: Session = Depends(get_db)) -> dict:
-    """draft -> sent (assigns the next number), sent -> paid, paid -> sent (undo)."""
+    """draft -> sent (assigns the next number), sent -> paid, paid -> sent (undo), sent -> void.
+
+    A voided invoice keeps its number and lines but is no longer owed, and its tracked time
+    becomes billable again. Voiding cannot be undone; a paid invoice must be marked unpaid first.
+    """
     invoice = get_or_404(db, Invoice, invoice_id)
     if (invoice.status, body.status) not in TRANSITIONS:
         raise HTTPException(409, f"A {invoice.status} invoice cannot be marked {body.status}.")
@@ -244,6 +249,8 @@ def set_status(invoice_id: int, body: StatusIn, db: Session = Depends(get_db)) -
                 break
         invoice.number = number
         db.add(issued_copy(invoice, db.get(Client, invoice.client_id), settings))
+    if body.status == "void":
+        _release_time(db, invoice_id)
     invoice.paid_on = (body.paid_on or today()) if body.status == "paid" else None
     invoice.status = body.status
     db.commit()
