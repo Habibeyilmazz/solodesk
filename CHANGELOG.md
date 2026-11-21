@@ -6,6 +6,25 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed (round 8, performance and accessibility lens)
+
+Measured first, on a database with 200 clients, 600 projects, 30,000 time entries and 5,000
+invoices (25,000 lines), on a laptop, Chromium via Playwright.
+
+- Built files under `/assets` were sent uncompressed and without a cache header, so every
+  visit re-validated them. They are now gzip-compressed (only there, not API responses, which
+  carry the CSRF token) and cached for a year as immutable (file names carry a content hash).
+  Over the wire: JS 306,464 B to 92,948 B, CSS 19,365 B to 5,107 B. Test in `tests/test_auth.py`.
+- Accessibility: axe-core 4.10 over every page and an invoice, light and dark, found one
+  failure, the draft status stamp (colour contrast 4.2:1, caused by the stamp's opacity).
+  Removed the opacity; axe now reports no violations on all of those views.
+- Measured and fine, so left alone: list, dashboard and CSV endpoints answer in 2 to 8 ms on
+  the large database, a PDF in about 55 ms, start-up is about 0.5 s, first contentful paint
+  76 ms locally, one font file (latin subset) is fetched. Every dependency is imported and
+  used, so nothing was removed. The Toggl-export, voided-on, partial credit note, social
+  preview and homepage gaps are unchanged (features or web-only settings, not bugs).
+- `make test` (76 pytest, 10 unit), `make lint` and `make e2e` (5 tests) pass locally.
+
 ### Added (round 7, feature lens)
 
 - Import time from a Toggl Track detailed report (CSV). **Import from Toggl** on the Time page

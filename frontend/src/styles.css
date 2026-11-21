@@ -978,7 +978,6 @@ a.tag {
   outline-offset: 2px;
   transform: rotate(-5deg);
   margin: 0.4rem 0.4rem 0 0;
-  opacity: 0.88;
 }
 
 .stamp.status-draft {

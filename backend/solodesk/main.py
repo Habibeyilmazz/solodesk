@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import __version__
 from .auth import LoginLimiter
@@ -60,6 +61,9 @@ def create_app(config: Config | None = None) -> FastAPI:
             response.headers["Content-Security-Policy"] = CSP
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+        elif request.url.path.startswith("/assets/"):
+            # Vite puts a content hash in every file name under /assets
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         return response
 
     @app.get("/api/health", tags=["meta"])
@@ -78,7 +82,9 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     if config.static_dir:
         index = config.static_dir / "index.html"
-        app.mount("/assets", StaticFiles(directory=config.static_dir / "assets"), name="assets")
+        # Compressed here, not app-wide: API responses carry the CSRF token and stay plain.
+        assets = GZipMiddleware(StaticFiles(directory=config.static_dir / "assets"))
+        app.mount("/assets", assets, name="assets")
 
         @app.get("/{path:path}", include_in_schema=False)
         def spa(path: str):

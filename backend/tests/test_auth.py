@@ -2,9 +2,10 @@ from fastapi.testclient import TestClient
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from solodesk.auth import LoginLimiter, hash_password, verify_password
-from solodesk.config import from_env
+from solodesk.config import Config, from_env
+from solodesk.main import create_app
 
-from .conftest import PASSWORD, make_app
+from .conftest import PASSWORD, PASSWORD_HASH, make_app
 from .test_concurrency import together
 
 
@@ -138,3 +139,24 @@ def test_security_headers(anon):
     assert headers["x-content-type-options"] == "nosniff"
     assert headers["x-frame-options"] == "DENY"
     assert "frame-ancestors 'none'" in headers["content-security-policy"]
+
+
+def test_built_assets_are_cached_and_compressed(tmp_path):
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<html></html>")
+    (tmp_path / "assets" / "app-abc123.js").write_text("console.log(1);" * 200)
+    app = create_app(
+        Config(
+            db_path=tmp_path / "t.db",
+            password_hash=PASSWORD_HASH,
+            session_key=b"k",
+            static_dir=tmp_path,
+        )
+    )
+    with TestClient(app) as client:
+        asset = client.get("/assets/app-abc123.js", headers={"Accept-Encoding": "gzip"})
+        assert asset.headers["content-encoding"] == "gzip"
+        assert "immutable" in asset.headers["cache-control"]
+        assert client.get("/").headers["cache-control"] == "no-cache"
+        api = client.get("/api/health", headers={"Accept-Encoding": "gzip"})
+        assert "content-encoding" not in api.headers
