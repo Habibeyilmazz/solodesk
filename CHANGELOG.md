@@ -6,6 +6,27 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed (round 10, design lens)
+
+Screenshotted every page of the running app (seeded and empty database) at 1280 px and
+390 px, light and dark, and tabbed through the dashboard with the keyboard. The look holds
+up; three things were off and are fixed:
+
+- Time page: each day is its own table, so the description, tag and duration columns started
+  at a different place every day. Day tables now share fixed column widths (above 600 px).
+- Dashboard on phones: client names in "Top clients" wrapped to three lines next to a short
+  bar, and the per-day hour labels ("4h 30m") wrapped. Name and amount now sit on one line
+  with the bar full width underneath, and the hour labels stay on one line.
+- Time page on a fresh install showed three empty notes and a "Show 30 more days" button.
+  With no projects at all, only the "add a client and a project" note remains.
+- Checked and fine, so left alone: every focusable element shows a focus ring in both
+  themes, transitions sit behind `prefers-reduced-motion: no-preference`, pages load in a
+  few ms locally so there is no loading spinner to flash. README screenshots refreshed.
+- Reported gaps re-checked: the 10,000-hour draft cap and 5,000-entry Time list cap are
+  limits a freelancer will not reach, not bugs; Toggl parser still untested on a real
+  export; credit notes, voided-on date and homepage still not done.
+- `make test` (78 pytest, 11 unit) and `make e2e` (5 tests) pass locally.
+
 ### Fixed (round 9, first-run lens)
 
 Followed the README quickstart literally in a fresh clone (`make seed`, `make run`, sign in,
