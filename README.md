@@ -4,7 +4,7 @@ A self-hosted back office for freelancers and tiny studios: clients, projects, a
 numbered PDF invoices in TRY, USD, EUR or GBP. It runs as one small app on your own machine,
 with your books in a single SQLite file that never leaves it.
 
-![The solodesk dashboard with a running timer, revenue per month, unpaid invoices, top clients and hours this week](docs/screenshots/dashboard.png)
+![The solodesk dashboard with the timer bar, revenue per month, unpaid invoices, top clients and hours this week](docs/screenshots/dashboard.png)
 
 ## Quickstart
 
@@ -54,12 +54,15 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
   invoices to chase, hours this week, and top clients. Shown per currency; nothing is converted.
 - **CSV export** of invoices and time entries.
 - **Single-user sign-in** with a password from the environment.
+- **Light and dark** follow your system setting. On a phone, the invoice list, time log and
+  line editor turn into stacked rows instead of scrolling sideways.
 
 | Time log | Invoice |
 | --- | --- |
 | ![Time entries grouped by day, with a form to add time by hand](docs/screenshots/time.png) | ![An overdue invoice with its lines, totals and an overdue stamp](docs/screenshots/invoice-overdue.png) |
 | ![Clients with their projects, hourly rates and unbilled time](docs/screenshots/clients.png) | ![A draft invoice being edited](docs/screenshots/invoice-draft.png) |
-| ![The invoice list with status filters](docs/screenshots/invoices.png) | <img src="docs/screenshots/phone-dashboard.png" width="250" alt="The dashboard on a phone-sized screen"> |
+| ![The invoice list with status filters](docs/screenshots/invoices.png) | ![The dashboard in dark mode](docs/screenshots/dashboard-dark.png) |
+| ![A draft invoice being edited, in dark mode](docs/screenshots/invoice-draft-dark.png) | <img src="docs/screenshots/phone-dashboard.png" width="250" alt="The dashboard on a phone-sized screen"> <img src="docs/screenshots/phone-invoices.png" width="250" alt="The invoice list on a phone-sized screen, one stacked row per invoice"> |
 
 All screenshots are of the running app with the demo data from `make seed`.
 
@@ -139,7 +142,7 @@ Not built yet:
 - Credit notes or voiding a sent invoice
 - Adding more tracked time to an existing draft, and per-entry detail lines
 - A warning before leaving a draft invoice with unsaved edits
-- A phone layout for the wider tables (today they scroll sideways)
+- Screens narrower than about 360px: client project tables and invoice lines still scroll sideways
 - Expenses and recurring invoices
 - Emailing invoices from the app
 - Schema migrations (0.1 creates tables on first start and has no upgrade path yet)

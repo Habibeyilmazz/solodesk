@@ -6,6 +6,27 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added (round 2, design lens)
+
+- Dark mode that follows the system setting. Colours are tokens on `:root` in
+  `frontend/src/styles.css`, redefined in one `prefers-color-scheme: dark` block; the navy
+  cover stays navy, native date pickers and selects follow via `color-scheme`.
+- Phone layout (600px and below) for the invoice list, the time log, the unbilled-time picker
+  on a new invoice and the draft line editor: each row becomes a small stacked grid (class
+  `stacks` plus per-table grid areas), so status, totals and Edit are on screen without
+  scrolling sideways. A third Playwright spec, `e2e/3-phone.spec.ts`, checks every page at
+  390px fits the width and the invoice row is fully visible (it fails on the old CSS).
+- README screenshots now include dark mode and the phone invoice list
+  (`frontend/scripts/screenshots.mjs` takes them).
+
+### Fixed (round 2)
+
+- On phones, tables no longer stop short of their box (the old `display: block` scroll hack
+  shrank them); project names and top-client names wrap instead of pushing amounts off screen.
+- The status filter on Invoices no longer wraps into a broken second row on phones.
+- The invoice stamp and page titles are smaller on phones so "Invoice INV-0047" fits one line.
+- The keyboard focus ring on sidebar links is drawn inside the sidebar instead of past its edge.
+
 Found by cloning the repository fresh and following the README, then reading the code.
 
 ### Fixed
@@ -73,7 +94,7 @@ First release.
   cookie, CSRF token on writes, login rate limit, security headers.
 - Demo data (`make seed`), Makefile (`make dev`, `make run`), Dockerfile and compose file.
 - Tests: pytest API and unit tests, Node unit tests for the money and duration parsers,
-  two Playwright specs (the main flow, then edits and undo paths), and a CI workflow that also builds and boots the Docker image.
+  two Playwright specs (the main flow, then edits and undo paths; a phone-width spec came later), and a CI workflow that also builds and boots the Docker image.
 
 ### Notes for whoever works on this next
 

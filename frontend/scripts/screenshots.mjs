@@ -9,8 +9,8 @@ const base = process.env.SOLODESK_URL ?? "http://127.0.0.1:4150";
 const out = fileURLToPath(new URL("../../docs/screenshots/", import.meta.url));
 const browser = await chromium.launch();
 
-async function session(viewport) {
-  const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
+async function session(viewport, colorScheme = "light") {
+  const page = await browser.newPage({ viewport, colorScheme, deviceScaleFactor: 2 });
   await page.goto(base);
   await page.getByLabel("Password").fill(process.env.SOLODESK_PASSWORD ?? "change-me-please");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -43,6 +43,11 @@ if (pick("paid")) {
 
 const phone = await session({ width: 390, height: 844 });
 await phone.shot("/", "phone-dashboard", true);
+await phone.shot("/invoices", "phone-invoices");
+
+const night = await session({ width: 1280, height: 940 }, "dark");
+await night.shot("/", "dashboard-dark");
+if (pick("draft")) await night.shot(`/invoices/${pick("draft")}`, "invoice-draft-dark");
 
 await browser.close();
 console.log(`Screenshots written to ${out}`);
