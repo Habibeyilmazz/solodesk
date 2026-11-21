@@ -90,14 +90,18 @@ def make_recurring_drafts(engine) -> None:
 async def lifespan(app: FastAPI):
     """Make due recurring drafts at start, then every 10 minutes (the date may change)."""
 
+    async def run():
+        try:
+            await run_in_threadpool(make_recurring_drafts, app.state.engine)
+        except Exception:  # a failed run is retried on the next tick
+            logging.getLogger("solodesk").exception("Making recurring drafts failed")
+
     async def tick():
         while True:
-            try:
-                await run_in_threadpool(make_recurring_drafts, app.state.engine)
-            except Exception:  # a failed run is retried on the next tick
-                logging.getLogger("solodesk").exception("Making recurring drafts failed")
             await asyncio.sleep(RECURRING_EVERY_SECONDS)
+            await run()
 
+    await run()  # before serving, so drafts missed while stopped are there on the first page
     task = asyncio.create_task(tick())
     yield
     task.cancel()

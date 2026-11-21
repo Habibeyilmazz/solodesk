@@ -15,7 +15,8 @@ All notable changes to solodesk are recorded here. The format follows
   total, and **Stop** ends one. Each draft is a copy as in round 12 (fixed lines only), dated
   its scheduled day, due after the current payment terms. Drafts are never sent automatically.
 - How it runs: a background task in the app's lifespan calls `make_due` at start and every 10
-  minutes (`backend/solodesk/main.py`); creating a schedule also runs it. A schedule stores
+  minutes (`backend/solodesk/main.py`); the start run finishes before the app serves (a first
+  version ran it as a task that CI could cancel before it ran). Creating a schedule also runs it. A schedule stores
   `start_date` and how many drafts it has `made`, and the next date is always computed from the
   start, so month-end days do not drift (31 Jan, 28 Feb, 31 Mar). `BEGIN IMMEDIATE` serialises
   the tick with requests, so a draft is never made twice.
