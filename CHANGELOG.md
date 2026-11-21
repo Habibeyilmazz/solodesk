@@ -6,6 +6,16 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added (round 6, launch lens)
+
+- `docs/demo.gif`, recorded from the real app by `frontend/scripts/demo.mjs` (Playwright plus
+  ffmpeg), at the top of the README. README gained an honest comparison with Invoice Ninja,
+  Kimai, Crater, spreadsheets and hosted tools, and a Contributing section.
+- `CONTRIBUTING.md`, bug and feature issue templates. Repo topics extended.
+- Reran `make test` (68 pytest, 10 unit) and `make e2e` (3 specs) locally: all green.
+- Not done: no hero or social-preview image (GitHub only accepts that upload through the web
+  settings); voided-on date and partial credit notes still undone.
+
 ### Fixed (round 5, reliability lens)
 
 Found by feeding the API odd input; each has a failing test first.

@@ -4,6 +4,10 @@ A self-hosted back office for freelancers and tiny studios: clients, projects, a
 numbered PDF invoices in TRY, USD, EUR or GBP. It runs as one small app on your own machine,
 with your books in a single SQLite file that never leaves it.
 
+![A 15-second recording of the real app: add a client and project, log time, build an invoice from it, send it, mark it paid, see the dashboard](docs/demo.gif)
+
+The recording above is the real app on an empty database (`frontend/scripts/demo.mjs`).
+
 ![The solodesk dashboard with the timer bar, revenue per month, unpaid invoices, top clients and hours this week](docs/screenshots/dashboard.png)
 
 ## Quickstart
@@ -142,6 +146,24 @@ CI runs all of these on every push, then builds the Docker image and checks that
 container starts, serves the app, produces an invoice PDF, honours `TZ` and can be backed up
 as described above.
 
+## Compared with the alternatives
+
+solodesk is deliberately small: one user, one SQLite file, no accounts to sign up for. Pick
+something else when you need what it leaves out.
+
+| | Good at | Pick it over solodesk when |
+| --- | --- | --- |
+| [Invoice Ninja](https://github.com/invoiceninja/invoiceninja) | Self-hostable or hosted invoicing with online payments, recurring invoices, expenses, client portal, many languages | You need clients to pay online, recurring billing or multiple users |
+| [Kimai](https://github.com/kimai/kimai) | Self-hosted time tracking for teams, with plugins and reports | Time tracking for several people is the main job |
+| [Crater](https://github.com/crater-invoice-inc/crater) | Self-hosted invoices and estimates | You want estimates and expenses in one app |
+| Spreadsheet plus a word processor | Zero setup, total flexibility | You send a handful of invoices a year |
+| Hosted tools (Harvest, FreshBooks and similar) | Payments, bank sync, support, accountants who know them | You want someone else to run it and need payment processing |
+
+What solodesk adds is a short path from tracked time to a numbered PDF invoice in TRY, USD, EUR
+or GBP, in one process you can read in an afternoon, with integer money arithmetic. It is not
+tax or accounting software: check numbering and invoice content rules with your accountant.
+These projects change; read their own pages for what they do today.
+
 ## Roadmap
 
 Not built yet:
@@ -156,6 +178,10 @@ Not built yet:
 - Schema migrations (0.1 creates tables on first start and has no upgrade path yet)
 - A Turkish interface and locale-specific number formats
 - Currency conversion for combined totals
+
+## Contributing
+
+Bug reports and focused pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
