@@ -34,9 +34,11 @@ jobs:
       - name: Lint (ruff)
         run: make lint
       - name: Audit Python dependencies for known vulnerabilities
+        # the app's dependencies as installed, not pip itself or the audit tool
         run: |
+          .venv/bin/pip freeze --exclude-editable > "$RUNNER_TEMP/requirements.txt"
           .venv/bin/pip install --quiet pip-audit
-          .venv/bin/pip-audit --skip-editable
+          .venv/bin/pip-audit --no-deps --disable-pip -r "$RUNNER_TEMP/requirements.txt"
       - name: Unit and API tests, typecheck
         run: make test
       - name: Install Chromium for Playwright
