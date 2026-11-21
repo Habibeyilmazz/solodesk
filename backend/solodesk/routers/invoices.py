@@ -11,6 +11,7 @@ from ..models import (
     InvoiceCreate,
     InvoiceFields,
     InvoiceLine,
+    IssuedCopy,
     LineIn,
     Project,
     Settings,
@@ -122,6 +123,20 @@ def _release_time(db: Session, invoice_id: int, project_id: int | None = None) -
     db.exec(stmt.values(invoice_id=None))
 
 
+def issued_copy(invoice: Invoice, client: Client, settings: Settings) -> IssuedCopy:
+    return IssuedCopy(
+        invoice_id=invoice.id, client=client.model_dump_json(), business=settings.model_dump_json()
+    )
+
+
+def parties(db: Session, invoice: Invoice) -> tuple[Client, Settings]:
+    """Who the PDF names: the details frozen when the invoice was sent, else today's."""
+    copy = db.get(IssuedCopy, invoice.id)
+    if copy is None:  # a draft, or an invoice sent before copies were kept
+        return db.get(Client, invoice.client_id), db.get(Settings, 1)
+    return Client.model_validate_json(copy.client), Settings.model_validate_json(copy.business)
+
+
 def _draft(db: Session, invoice_id: int) -> Invoice:
     invoice = get_or_404(db, Invoice, invoice_id)
     if invoice.status != "draft":
@@ -225,6 +240,7 @@ def set_status(invoice_id: int, body: StatusIn, db: Session = Depends(get_db)) -
             if not db.exec(select(Invoice.id).where(Invoice.number == number)).first():
                 break
         invoice.number = number
+        db.add(issued_copy(invoice, db.get(Client, invoice.client_id), settings))
     invoice.paid_on = (body.paid_on or today()) if body.status == "paid" else None
     invoice.status = body.status
     db.commit()
@@ -249,8 +265,7 @@ def invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
     pdf = render_invoice(
         invoice,
         get_lines(db, invoice_id),
-        db.get(Client, invoice.client_id),
-        db.get(Settings, 1),
+        *parties(db, invoice),
         effective_status(invoice, today()),
     )
     name = (invoice.number or f"draft-{invoice.id}").replace("/", "-")

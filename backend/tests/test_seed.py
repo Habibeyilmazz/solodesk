@@ -3,7 +3,7 @@ import datetime as dt
 from sqlmodel import Session, select
 
 from solodesk.db import make_engine
-from solodesk.models import Invoice, InvoiceLine, TimeEntry
+from solodesk.models import Invoice, InvoiceLine, IssuedCopy, TimeEntry
 from solodesk.money import totals
 from solodesk.routers.reports import build_dashboard
 from solodesk.seed import seed
@@ -17,6 +17,7 @@ def test_seed_produces_consistent_books(tmp_path):
         numbers = sorted(i.number for i in invoices if i.number)
         assert numbers == [f"INV-{n:04d}" for n in range(1, len(numbers) + 1)]  # no gaps
         assert {i.status for i in invoices} == {"draft", "sent", "paid"}
+        assert len(db.exec(select(IssuedCopy)).all()) == len(numbers)  # every issued invoice
         assert {i.currency for i in invoices} == {"TRY", "USD", "EUR", "GBP"}
         for invoice in invoices:
             amounts = db.exec(

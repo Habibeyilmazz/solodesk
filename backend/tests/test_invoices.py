@@ -1,9 +1,10 @@
 import datetime as dt
 
 import pytest
+from sqlmodel import Session
 
 from solodesk.models import Invoice
-from solodesk.routers.invoices import effective_status
+from solodesk.routers.invoices import effective_status, parties
 
 LINE = {"description": "Brand guidelines", "quantity_hundredths": 100, "unit_price_minor": 250_000}
 
@@ -245,6 +246,25 @@ def test_pdf_export(api, acme):
     sent = api.get(f"/api/invoices/{invoice['id']}/pdf")
     assert "INV-0001.pdf" in sent.headers["content-disposition"]
     assert api.get("/api/invoices/999/pdf").status_code == 404
+
+
+def test_a_sent_invoice_keeps_the_details_it_was_sent_with(app, api, acme):
+    sent = make_invoice(api, acme["client"]["id"])
+    mark(api, sent["id"], "sent")
+    draft = make_invoice(api, acme["client"]["id"])
+
+    moved = {"name": "Acme Teknoloji A.Ş.", "address": "Yeni Adres 1", "currency": "TRY"}
+    assert api.put(f"/api/clients/{acme['client']['id']}", json=moved).status_code == 200
+    assert api.put("/api/settings", json={"business_name": "Renamed Studio"}).status_code == 200
+
+    def names(invoice_id):
+        with Session(app.state.engine) as db:
+            client, business = parties(db, db.get(Invoice, invoice_id))
+            return client.name, client.address, business.business_name
+
+    assert names(sent["id"]) == ("Acme Yazılım", "", "My Studio")
+    assert names(draft["id"]) == ("Acme Teknoloji A.Ş.", "Yeni Adres 1", "Renamed Studio")
+    assert api.get(f"/api/invoices/{sent['id']}/pdf").status_code == 200
 
 
 def test_amounts_are_bounded(api, acme):

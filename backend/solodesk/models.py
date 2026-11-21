@@ -67,6 +67,18 @@ class InvoiceLine(SQLModel, table=True):
     project_id: int | None = Field(default=None, foreign_key="project.id")  # set on time lines
 
 
+class IssuedCopy(SQLModel, table=True):
+    """The client and business details as they were when an invoice was sent.
+
+    The PDF of a sent invoice prints these, so editing a client or the settings later does
+    not rewrite invoices that are already with the customer.
+    """
+
+    invoice_id: int = Field(primary_key=True, foreign_key="invoice.id")
+    client: str  # the Client row as JSON
+    business: str  # the Settings row as JSON
+
+
 class TimeEntry(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="project.id", index=True)

@@ -42,7 +42,8 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
 - **Invoices.** Build a draft from a client's unbilled time (one line per project), from fixed
   line items, or both. Percentage discount and tax, totals updated as you type.
 - **Sequential numbers.** An invoice gets its number (`INV-0001`, prefix configurable) when you
-  mark it sent, so deleted drafts never leave a gap. Sent invoices are locked.
+  mark it sent, so deleted drafts never leave a gap. Sent invoices are locked, and their PDF
+  keeps printing your details and the client's as they were on the day it was sent.
 - **Status flow.** Draft, sent, paid, with overdue shown automatically once the due date passes.
   A payment marked by mistake can be undone.
 - **PDF export** with your business details, the client's, and Turkish characters and ₺ intact
@@ -134,7 +135,6 @@ as described above.
 Not built yet:
 
 - Fixed-amount discounts and per-line tax rates
-- Freezing client and business details on a sent invoice (the PDF currently prints the current ones)
 - Credit notes or voiding a sent invoice
 - Adding more tracked time to an existing draft, and per-entry detail lines
 - A warning before leaving a draft invoice with unsaved edits

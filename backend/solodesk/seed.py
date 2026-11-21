@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 from .config import db_path_from_env
 from .db import make_engine, today
 from .models import Client, Invoice, InvoiceLine, Project, Settings, TimeEntry
-from .routers.invoices import _lines_from_time, _recalculate
+from .routers.invoices import _lines_from_time, _recalculate, issued_copy
 
 MONTHS_BACK = 8
 
@@ -214,6 +214,7 @@ def seed(db: Session, on: dt.date) -> None:
             number += 1
             invoice.number = f"{settings.invoice_prefix}{number:04d}"
             invoice.status = "paid" if fate == "paid" else "sent"
+            db.add(issued_copy(invoice, client, settings))
             if fate == "paid":
                 invoice.paid_on = min(issue + dt.timedelta(days=rng.randint(3, 16)), on)
     settings.next_invoice_number = number + 1
