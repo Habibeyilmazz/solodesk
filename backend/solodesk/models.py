@@ -88,6 +88,17 @@ class IssuedCopy(SQLModel, table=True):
     business: str  # the Settings row as JSON
 
 
+class Recurring(SQLModel, table=True):
+    """Make a draft copy of a sent invoice every `every_months`, from `start_date` on."""
+
+    __table_args__ = NO_ID_REUSE
+    id: int | None = Field(default=None, primary_key=True)
+    source_invoice_id: int = Field(foreign_key="invoice.id", index=True)
+    every_months: int
+    start_date: dt.date
+    made: int = 0  # drafts created so far; the next one is due start_date + made * every_months
+
+
 class TimeEntry(SQLModel, table=True):
     __table_args__ = NO_ID_REUSE
     id: int | None = Field(default=None, primary_key=True)
@@ -210,6 +221,12 @@ class AddTimeIn(Body):
 class StatusIn(Body):
     status: Literal["sent", "paid", "void"]
     paid_on: Day | None = None
+
+
+class RecurringIn(Body):
+    invoice_id: int
+    every_months: Literal[1, 3, 6, 12]
+    start_date: Day  # the first draft's issue date
 
 
 class TogglImportIn(Body):

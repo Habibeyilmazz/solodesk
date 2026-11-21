@@ -268,20 +268,18 @@ def add_time(invoice_id: int, body: AddTimeIn, db: Session = Depends(get_db)) ->
     return invoice_out(invoice, db.get(Client, invoice.client_id), get_lines(db, invoice_id))
 
 
-@router.post("/{invoice_id}/copy", status_code=201)
-def copy_invoice(invoice_id: int, db: Session = Depends(get_db)) -> dict:
-    """A new draft for the same client with this invoice's fixed lines, rates and notes.
+def copy_to_draft(db: Session, source: Invoice, issue: dt.date) -> Invoice:
+    """A new draft for the same client with the source's fixed lines, rates and notes.
 
-    Dated today with the current payment terms. Time lines are left out: their hours are
-    already billed, so the new draft takes fresh tracked time through `/time` instead.
+    Due after the current payment terms. Time lines are left out: their hours are already
+    billed, so the new draft takes fresh tracked time through `/time` instead.
     """
-    source = get_or_404(db, Invoice, invoice_id)
     terms = db.get(Settings, 1).payment_terms_days
     invoice = Invoice(
         client_id=source.client_id,
         currency=source.currency,  # the copied prices are in this currency
-        issue_date=today(),
-        due_date=today() + dt.timedelta(days=terms),
+        issue_date=issue,
+        due_date=issue + dt.timedelta(days=terms),
         tax_rate_bp=source.tax_rate_bp,
         discount_bp=source.discount_bp,
         notes=source.notes,
@@ -296,11 +294,18 @@ def copy_invoice(invoice_id: int, db: Session = Depends(get_db)) -> dict:
             unit_price_minor=line.unit_price_minor,
             amount_minor=0,
         )
-        for line in get_lines(db, invoice_id)
+        for line in get_lines(db, source.id)
         if line.project_id is None
     ]
     _recalculate(invoice, lines)
     db.add_all(lines)
+    return invoice
+
+
+@router.post("/{invoice_id}/copy", status_code=201)
+def copy_invoice(invoice_id: int, db: Session = Depends(get_db)) -> dict:
+    """A new draft dated today with this invoice's fixed lines, rates and notes (no time lines)."""
+    invoice = copy_to_draft(db, get_or_404(db, Invoice, invoice_id), today())
     db.commit()
     return invoice_out(invoice, db.get(Client, invoice.client_id), get_lines(db, invoice.id))
 

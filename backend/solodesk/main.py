@@ -1,5 +1,9 @@
 """The solodesk application: JSON API under /api, the built React app everywhere else."""
 
+import asyncio
+import contextlib
+import logging
+
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -12,9 +16,9 @@ from starlette.middleware.gzip import GZipMiddleware
 from . import __version__
 from .auth import LoginLimiter
 from .config import Config, from_env
-from .db import make_engine
+from .db import make_engine, today
 from .deps import current_session, require_auth
-from .routers import auth, clients, imports, invoices, reports, settings, time
+from .routers import auth, clients, imports, invoices, recurring, reports, settings, time
 
 CSP = (
     "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
@@ -74,6 +78,31 @@ class BodyLimit:
         await self.app(scope, counted_receive, send)
 
 
+RECURRING_EVERY_SECONDS = 600
+
+
+def make_recurring_drafts(engine) -> None:
+    with Session(engine) as db:
+        recurring.make_due(db, today())
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Make due recurring drafts at start, then every 10 minutes (the date may change)."""
+
+    async def tick():
+        while True:
+            try:
+                await run_in_threadpool(make_recurring_drafts, app.state.engine)
+            except Exception:  # a failed run is retried on the next tick
+                logging.getLogger("solodesk").exception("Making recurring drafts failed")
+            await asyncio.sleep(RECURRING_EVERY_SECONDS)
+
+    task = asyncio.create_task(tick())
+    yield
+    task.cancel()
+
+
 def signed_in(scope) -> bool:
     with Session(scope["app"].state.engine) as db:
         return current_session(Request(scope), db) is not None
@@ -90,6 +119,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         docs_url=None,
         redoc_url=None,
         openapi_url="/api/openapi.json",
+        lifespan=lifespan,
     )
     app.state.config = config
     app.state.engine = make_engine(config.db_path)
@@ -146,7 +176,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         return HTMLResponse(html)
 
     app.include_router(auth.router)
-    for module in (clients, time, invoices, reports, settings, imports):
+    for module in (clients, time, invoices, recurring, reports, settings, imports):
         app.include_router(module.router, dependencies=[Depends(require_auth)])
 
     @app.api_route(
