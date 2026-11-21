@@ -6,6 +6,26 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Checked (round 16, performance and accessibility lens)
+
+Measured the built app (Chromium via Playwright, seeded demo data, then 50,000 extra time
+entries) and found nothing worth changing, so no code changed:
+
+- Bundle: one JS file, 310 kB (95 kB gzip), CSS 20.6 kB (5.4 kB gzip); the six font subsets load
+  only when their characters appear. Hashed assets are served `immutable` and gzipped.
+- Pages: first contentful paint 32-44 ms on every route (local, warm cache); a cold start of
+  `create_app` takes about 0.4 s.
+- API on 50,000 time entries: `/api/time` 8 ms (capped at 500 rows by default), dashboard 6 ms,
+  unbilled list at the 5,000-row maximum 105 ms, PDF of a seeded invoice 54 ms.
+- Accessibility: on all five pages in light and dark, no unnamed buttons, links or fields; one
+  `h1` and one `main` each; a distinct title per route; no text under WCAG AA contrast (checked
+  from computed styles); skip link, focus-visible styles, native `<dialog>`, `scope` on headers.
+- Dead code: `ruff` clean, no unused exports, no unused dependencies; the only CSS classes not
+  named in the TSX are the `status-*` ones built at run time.
+- Reported gaps re-checked: Toggl real export (cannot be tested without an account), CJK PDF
+  glyphs, no homepage, no editing of schedules and no automatic sending are unchanged and are
+  features or known limits, not bugs. Not run: Lighthouse itself (not installed; no global installs).
+
 ### Added (round 15, feature lens)
 
 - **Recurring invoices.** The most-reported open gap, and the next step after round 12's
