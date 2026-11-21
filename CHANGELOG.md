@@ -6,6 +6,25 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed (round 13, tests lens)
+
+Tried to break the running API with odd input (emoji and CJK names, 400-character words,
+maximum amounts, a timer running while its project is archived or deleted, odd Toggl files,
+bad query values). Almost everything held; two real bugs, each with a failing test first:
+
+- Marking an invoice paid on a future date was accepted, and the payment then fell outside the
+  dashboard's 12 months, so it vanished from revenue. A payment date more than one day ahead
+  (slack for time zones) is now a 422. `tests/test_invoices.py`.
+- A Toggl CSV saved with semicolons (what Excel does in many locales) was refused as "not a
+  Toggl report". The delimiter is now read from the header line. `tests/test_import.py`.
+- Python runtime dependencies are pinned in `backend/constraints.txt`; the Dockerfile and
+  `make` install with it. Regenerate it from a clean venv with `pip freeze` when upgrading.
+- Known and left alone: the PDF font (DejaVu Sans) has no CJK or Arabic-ligature glyphs, so
+  those characters print blank in PDFs (the app warns in its log); the API and UI show them.
+- Still open: Docker base images are tags, not digests; the Toggl parser is untested on a real
+  export (only on synthetic files shaped like one); no scheduled recurring invoices.
+  Commits are signed with the model name the harness assigns.
+
 ### Added (round 12, feature lens)
 
 - **Copy to new draft** on sent, paid and void invoices. Chosen by walking through a month of

@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
     SOLODESK_DATA_DIR=/data \
     SOLODESK_STATIC_DIR=/app/static
 COPY backend/ /src/
-RUN pip install --no-cache-dir /src && rm -rf /src \
+RUN pip install --no-cache-dir -c /src/constraints.txt /src && rm -rf /src \
     && useradd --system --uid 10001 solodesk \
     && mkdir /data && chown solodesk /data
 COPY --from=ui /ui/dist /app/static

@@ -16,7 +16,7 @@ $(VENV): backend/pyproject.toml
 	  echo "Name a newer one, for example: make $(or $(MAKECMDGOALS),run) PYTHON=python3.12"; \
 	  exit 1; }
 	$(PYTHON) -m venv $(VENV)
-	$(BIN)/pip install --quiet -e "backend[dev]" || { rm -rf $(VENV); exit 1; }
+	$(BIN)/pip install --quiet -c backend/constraints.txt -e "backend[dev]" || { rm -rf $(VENV); exit 1; }
 	@touch $(VENV)
 
 frontend/node_modules: frontend/package-lock.json
