@@ -29,5 +29,6 @@ def test_seed_produces_consistent_books(tmp_path):
 
         data = build_dashboard(db, on)
         assert data["by_currency"]["USD"]["overdue_count"] == 1
+        assert data["by_currency"]["TRY"]["unpaid_count"] == 2
         assert data["week"]["total_minutes"] > 0
         assert len(data["by_currency"]["TRY"]["top_clients"]) == 2

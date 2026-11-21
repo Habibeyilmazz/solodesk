@@ -159,7 +159,7 @@ def seed(db: Session, on: dt.date) -> None:
     db.flush()
 
     # one invoice per client per finished month, numbered in the order they were issued
-    last_month_fate = ["paid", "sent", "overdue", "sent", "paid"]
+    last_month_fate = ["sent", "paid", "overdue", "sent", "overdue"]
     number = 0
     for back in range(MONTHS_BACK, 0, -1):
         first, after = month_start(on, back), month_start(on, back - 1)

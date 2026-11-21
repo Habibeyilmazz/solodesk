@@ -42,10 +42,13 @@ def test_dashboard(app, api, acme):
     assert lira["revenue_minor"] == 225_000
     assert (lira["unpaid_minor"], lira["unpaid_count"]) == (300_000, 1)  # tax included
     assert (lira["overdue_minor"], lira["overdue_count"]) == (300_000, 1)
+    [chase] = lira["open_invoices"]
+    assert (chase["number"], chase["overdue"], chase["total_minor"]) == ("INV-0002", True, 300_000)
     assert lira["top_clients"] == [{"client_id": cid, "name": "Acme Yazılım", "net_minor": 225_000}]
 
     dollars = data["by_currency"]["USD"]
     assert (dollars["unpaid_minor"], dollars["overdue_minor"]) == (250_000, 0)
+    assert dollars["open_invoices"][0]["overdue"] is False
     assert dollars["top_clients"] == []
 
     assert data["week"]["total_minutes"] == 150

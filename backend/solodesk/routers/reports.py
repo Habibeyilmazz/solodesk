@@ -14,6 +14,7 @@ from .invoices import effective_status
 router = APIRouter(prefix="/api", tags=["reports"])
 MONTHS = 12
 TOP_CLIENTS = 5
+OPEN_SHOWN = 5
 
 
 def last_months(on: dt.date, count: int = MONTHS) -> list[str]:
@@ -37,6 +38,7 @@ def build_dashboard(db: Session, on: dt.date) -> dict:
                 "unpaid_count": 0,
                 "overdue_minor": 0,
                 "overdue_count": 0,
+                "open": [],
                 "clients": {},
             },
         )
@@ -54,6 +56,16 @@ def build_dashboard(db: Session, on: dt.date) -> dict:
         else:
             bucket["unpaid_minor"] += invoice.total_minor
             bucket["unpaid_count"] += 1
+            bucket["open"].append(
+                {
+                    "id": invoice.id,
+                    "number": invoice.number,
+                    "client_name": client_name,
+                    "due_date": invoice.due_date,
+                    "total_minor": invoice.total_minor,
+                    "overdue": invoice.due_date < on,
+                }
+            )
             if effective_status(invoice, on) == "overdue":
                 bucket["overdue_minor"] += invoice.total_minor
                 bucket["overdue_count"] += 1
@@ -84,6 +96,8 @@ def build_dashboard(db: Session, on: dt.date) -> dict:
                 "unpaid_count": bucket["unpaid_count"],
                 "overdue_minor": bucket["overdue_minor"],
                 "overdue_count": bucket["overdue_count"],
+                # the ones to chase first
+                "open_invoices": sorted(bucket["open"], key=lambda i: i["due_date"])[:OPEN_SHOWN],
                 "top_clients": sorted(
                     bucket["clients"].values(), key=lambda c: c["net_minor"], reverse=True
                 )[:TOP_CLIENTS],
