@@ -450,3 +450,40 @@ def test_adding_time_is_for_drafts_and_unbilled_entries_only(api, acme):
         api.post("/api/invoices/999/time", json={"time_entry_ids": [fresh["id"]]}).status_code
         == 404
     )
+
+
+def test_copying_an_invoice_to_a_new_draft(api, acme):
+    cid = acme["client"]["id"]
+    entry = log_time(api, acme["project"]["id"], 90)
+    body = {"client_id": cid, "time_entry_ids": [entry["id"]], "issue_date": "2026-01-01",
+            "tax_rate_bp": 1800, "discount_bp": 500, "notes": "IBAN on the PDF"}  # fmt: skip
+    source = make_invoice(api, **body)
+    mark(api, source["id"], "sent")
+    api.put("/api/settings", json={**_writable(api.get("/api/settings").json()),
+                                   "payment_terms_days": 30})  # fmt: skip
+    api.put(f"/api/clients/{cid}", json={"name": "Acme Yazılım", "currency": "EUR"})
+
+    r = api.post(f"/api/invoices/{source['id']}/copy")
+    assert r.status_code == 201, r.text
+    copy = r.json()
+    assert copy["id"] != source["id"]
+    assert (copy["status"], copy["number"], copy["client_id"]) == ("draft", None, cid)
+    # prices stay in the currency they were written in, even if the client's changed since
+    assert copy["currency"] == "TRY"
+    assert (copy["tax_rate_bp"], copy["discount_bp"]) == (1800, 500)
+    assert copy["notes"] == "IBAN on the PDF"
+    issue = dt.date.fromisoformat(copy["issue_date"])
+    assert issue == dt.date.today()
+    assert dt.date.fromisoformat(copy["due_date"]) == issue + dt.timedelta(days=30)
+    # the fixed line is copied; the time line is not, its hours stay billed on the original
+    assert [(line["description"], line["project_id"]) for line in copy["lines"]] == [
+        ("Brand guidelines", None)
+    ]
+    assert copy["subtotal_minor"] == 250_000
+    assert copy["total_minor"] == 280_250  # 250,000 - 5% = 237,500, plus 18% tax
+    assert api.get("/api/time", params={"unbilled": True}).json() == []
+    assert api.get(f"/api/invoices/{source['id']}").json()["number"] == "INV-0001"
+
+    # works from void and draft invoices too, and on a missing one answers 404
+    assert api.post(f"/api/invoices/{copy['id']}/copy").status_code == 201
+    assert api.post("/api/invoices/999/copy").status_code == 404
