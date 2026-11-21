@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Lint (ruff)
+        run: make lint
+      - name: Unit and API tests, typecheck
+        run: make test
+      - name: Install Chromium for Playwright
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Build and run the end-to-end smoke test
+        run: make e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-traces
+          path: frontend/test-results
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate compose file
+        run: docker compose config --quiet
+      - name: Build image
+        run: docker compose build
+      - name: Start the container and wait for it to answer
+        env:
+          SOLODESK_PASSWORD: ci-only-password
+        run: |
+          docker compose up -d
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4150/api/health; then
+              curl -fsS http://127.0.0.1:4150/ | grep -q '<div id="root">'
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose logs
+          exit 1

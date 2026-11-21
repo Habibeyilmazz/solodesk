@@ -1,0 +1,18 @@
+# docker compose up -d   (reads SOLODESK_PASSWORD from .env; see .env.example)
+services:
+  solodesk:
+    build: .
+    image: solodesk:local
+    ports:
+      - "127.0.0.1:4150:4150" # local only; put a TLS reverse proxy in front to expose it
+    environment:
+      SOLODESK_PASSWORD: ${SOLODESK_PASSWORD:-}
+      SOLODESK_PASSWORD_HASH: ${SOLODESK_PASSWORD_HASH:-}
+      SOLODESK_COOKIE_SECURE: ${SOLODESK_COOKIE_SECURE:-}
+      TZ: ${TZ:-UTC} # decides when "today" starts for timers and due dates
+    volumes:
+      - solodesk-data:/data
+    restart: unless-stopped
+
+volumes:
+  solodesk-data:
