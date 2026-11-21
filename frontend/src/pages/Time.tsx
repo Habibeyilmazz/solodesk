@@ -28,6 +28,8 @@ export default function Time() {
   const projects = useLoad(() => api<Project[]>("/projects"), [version]);
   const active = (projects.data ?? []).filter((p) => !p.archived);
   const byDay = Map.groupBy(entries.data ?? [], (e) => e.date);
+  // no project has ever existed, so there is no time to list or page through
+  const fresh = projects.data?.length === 0;
 
   return (
     <>
@@ -58,7 +60,7 @@ export default function Time() {
       )}
 
       <ErrorNote message={entries.error} />
-      {entries.data?.length === 0 && (
+      {entries.data?.length === 0 && !fresh && (
         <p className="empty">No time logged in the last {days} days.</p>
       )}
 
@@ -101,7 +103,7 @@ export default function Time() {
         </section>
       ))}
 
-      {entries.data && (
+      {entries.data && !fresh && (
         <p className="more">
           <button type="button" className="btn" onClick={() => setDays(days + PAGE_DAYS)}>
             Show {PAGE_DAYS} more days
