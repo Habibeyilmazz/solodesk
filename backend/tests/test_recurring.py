@@ -80,14 +80,26 @@ def test_a_past_start_catches_up_one_draft_per_period(api, acme):
 
 def test_time_lines_are_not_repeated(api, acme):
     entry = log_time(api, acme["project"]["id"], 60)
-    source = sent_invoice(api, acme, time_entry_ids=[entry["id"]])
-    api.post(
+    source = sent_invoice(api, acme, time_entry_ids=[entry["id"]], tax_rate_bp=2000)
+    assert source["total_minor"] == 480_000  # 2,500 fixed + 1,500 for the hour, plus 20%
+    r = api.post(
         "/api/recurring",
         json={"invoice_id": source["id"], "every_months": 3, "start_date": TODAY.isoformat()},
     )
+    assert r.json()["total_minor"] == 300_000  # what each draft will be: the fixed line only
     [draft] = drafts(api)
-    lines = api.get(f"/api/invoices/{draft['id']}").json()["lines"]
-    assert [line["project_id"] for line in lines] == [None]
+    full = api.get(f"/api/invoices/{draft['id']}").json()
+    assert [line["project_id"] for line in full["lines"]] == [None]
+    assert full["total_minor"] == 300_000
+
+
+def test_an_invoice_of_only_tracked_time_cannot_repeat(api, acme):
+    entry = log_time(api, acme["project"]["id"], 60)
+    source = sent_invoice(api, acme, time_entry_ids=[entry["id"]], lines=[])
+    body = {"invoice_id": source["id"], "every_months": 1, "start_date": TODAY.isoformat()}
+    r = api.post("/api/recurring", json=body)
+    assert r.status_code == 409 and "only tracked time" in r.json()["detail"]
+    assert drafts(api) == []
 
 
 def test_validation(api, acme):

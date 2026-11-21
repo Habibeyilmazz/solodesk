@@ -1127,6 +1127,16 @@ input.num {
   margin-top: 1.25rem;
 }
 
+/* ---------- recurring invoices ---------- */
+
+.recurring {
+  margin-top: 2.5rem;
+}
+
+.recurring > p {
+  margin: 0.25rem 0 0.75rem;
+}
+
 /* ---------- dialogs ---------- */
 
 dialog {
@@ -1430,6 +1440,21 @@ dialog h2 {
 
   .invoices tr > :nth-child(3)::before { content: "Issued "; }
   .invoices tr > :nth-child(4)::before { content: "Due "; }
+
+  /* recurring: number and total, client and stop, then how often and when */
+  .recurring-list tr {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "number total" "client stop" "every next";
+  }
+
+  .recurring-list tr > :nth-child(1) { grid-area: number; }
+  .recurring-list tr > :nth-child(2) { grid-area: client; white-space: normal; }
+  .recurring-list tr > :nth-child(3) { grid-area: every; }
+  .recurring-list tr > :nth-child(4) { grid-area: next; text-align: right; }
+  .recurring-list tr > :nth-child(5) { grid-area: total; font-weight: 600; }
+  .recurring-list tr > :nth-child(6) { grid-area: stop; text-align: right; }
+
+  .recurring-list tr > :nth-child(4)::before { content: "Next "; }
 
   /* time log: project and duration, then what was done */
   .day .stacks tr {

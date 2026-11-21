@@ -49,6 +49,17 @@ export function addDays(iso: string, days: number): string {
   return isoDate(d);
 }
 
+/** "2026-01-31" + 1 month -> "2026-02-28": clamped to the month's end, as the server does. */
+export function addMonths(iso: string, months: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const last = new Date(y, m - 1 + months + 1, 0).getDate(); // day 0 is the previous month's last
+  return isoDate(new Date(y, m - 1 + months, Math.min(d, last)));
+}
+
+export function everyLabel(months: number): string {
+  return months === 1 ? "Every month" : months === 12 ? "Every year" : `Every ${months} months`;
+}
+
 /** Days back from today, in whole pages of `page` days, for a list to reach back to `iso`. */
 export function daysToCover(iso: string, page: number, today: string = isoDate()): number {
   const days = Math.round((Date.parse(today) - Date.parse(iso)) / 86_400_000);

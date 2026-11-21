@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Invoice, type TimeEntry, useAction, useLoad } from "../api.ts";
 import { TimePicker, toggled } from "../components/TimePicker.tsx";
@@ -11,7 +11,7 @@ import {
   totals,
   trimHundredths,
 } from "../lib/money.ts";
-import { formatDate, formatDuration, isoDate } from "../lib/time.ts";
+import { addMonths, everyLabel, formatDate, formatDuration, isoDate } from "../lib/time.ts";
 import { useRefresh } from "../refresh.ts";
 
 export default function InvoiceDetail() {
@@ -50,6 +50,7 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
   const { bump } = useRefresh();
   const navigate = useNavigate();
   const [paidOn, setPaidOn] = useState(isoDate());
+  const [repeating, setRepeating] = useState(false);
   const { busy, error, run } = useAction();
   const money = (minor: number) => formatMoney(minor, invoice.currency);
 
@@ -161,6 +162,12 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
         <button type="button" className="btn" onClick={copy} disabled={busy}>
           Copy to new draft
         </button>
+        {invoice.lines?.some((line) => line.project_id === null) && (
+          // only fixed lines are repeated; tracked time is billed once
+          <button type="button" className="btn" onClick={() => setRepeating(true)} disabled={busy}>
+            Repeat
+          </button>
+        )}
         {invoice.status === "void" ? (
           <span className="muted">Voided: no longer owed. Any tracked time on it can be invoiced again.</span>
         ) : invoice.status === "paid" ? (
@@ -181,7 +188,78 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
           </>
         )}
       </div>
+      {repeating && <RepeatDialog invoice={invoice} onClose={() => setRepeating(false)} />}
     </>
+  );
+}
+
+function RepeatDialog({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const navigate = useNavigate();
+  const [every, setEvery] = useState(1);
+  const firstFor = (months: number) => {
+    const next = addMonths(invoice.issue_date, months);
+    return next < isoDate() ? isoDate() : next;
+  };
+  const [start, setStart] = useState(firstFor(1));
+  const [touched, setTouched] = useState(false); // keep a date the user picked
+  const { busy, error, run } = useAction();
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    run(async () => {
+      await api("/recurring", {
+        method: "POST",
+        body: { invoice_id: invoice.id, every_months: every, start_date: start },
+      });
+      navigate("/invoices");
+    });
+  }
+
+  return (
+    <Dialog title={`Repeat ${invoice.number}`} onClose={onClose}>
+      <form onSubmit={submit} className="stack">
+        <p className="muted">
+          solodesk makes a draft copy on each date, with this invoice's fixed lines, tax, discount and
+          notes. You check each draft and send it yourself. Lines from tracked time are not copied.
+        </p>
+        <Field label="How often">
+          <select
+            value={every}
+            onChange={(e) => {
+              const months = Number(e.target.value);
+              setEvery(months);
+              if (!touched) setStart(firstFor(months));
+            }}
+          >
+            {[1, 3, 6, 12].map((months) => (
+              <option key={months} value={months}>
+                {everyLabel(months)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="First draft on" hint="A date today or earlier makes those drafts now.">
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => {
+              setStart(e.target.value);
+              setTouched(true);
+            }}
+            required
+          />
+        </Field>
+        <ErrorNote message={error} />
+        <div className="form-actions">
+          <button type="submit" className="btn btn-primary" disabled={busy || !start}>
+            Repeat invoice
+          </button>
+          <button type="button" className="btn" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 

@@ -68,6 +68,17 @@ export type Invoice = {
   lines?: InvoiceLine[];
 };
 
+export type Recurring = {
+  id: number;
+  source_invoice_id: number;
+  source_number: string;
+  client_name: string;
+  currency: string;
+  total_minor: number;
+  every_months: number;
+  next_date: string;
+};
+
 export type Settings = {
   business_name: string;
   business_address: string;

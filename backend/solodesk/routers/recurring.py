@@ -13,7 +13,8 @@ from sqlmodel import Session, select
 from ..db import today
 from ..deps import get_db, get_or_404
 from ..models import Client, Invoice, Recurring, RecurringIn
-from .invoices import copy_to_draft
+from ..money import totals
+from .invoices import copy_to_draft, get_lines
 
 router = APIRouter(prefix="/api/recurring", tags=["recurring"])
 
@@ -48,15 +49,22 @@ def make_due(db: Session, on: dt.date) -> int:
     return made
 
 
+def fixed_amounts(db: Session, invoice: Invoice) -> list[int]:
+    """The lines a copy keeps: everything but tracked time."""
+    return [line.amount_minor for line in get_lines(db, invoice.id) if line.project_id is None]
+
+
 def schedule_out(db: Session, schedule: Recurring) -> dict:
     source = db.get(Invoice, schedule.source_invoice_id)
+    amounts = fixed_amounts(db, source)
     return {
         **schedule.model_dump(),
         "next_date": next_date(schedule),
         "source_number": source.number,
         "client_name": db.get(Client, source.client_id).name,
         "currency": source.currency,
-        "total_minor": source.total_minor,
+        # what each draft will total, not the source: its time lines are not copied
+        "total_minor": totals(amounts, source.discount_bp, source.tax_rate_bp).total_minor,
     }
 
 
@@ -73,6 +81,10 @@ def create_recurring(body: RecurringIn, db: Session = Depends(get_db)) -> dict:
     if source.status == "draft":
         # a draft can still change or be deleted; a sent invoice is a fixed template
         raise HTTPException(409, "Send the invoice before repeating it.")
+    if not fixed_amounts(db, source):
+        raise HTTPException(
+            409, "This invoice has only tracked time, which is not repeated. Add fixed lines."
+        )
     if body.start_date < today() - dt.timedelta(days=366):
         raise HTTPException(422, "The first draft can be at most a year in the past.")
     schedule = Recurring(

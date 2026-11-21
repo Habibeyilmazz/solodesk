@@ -3,7 +3,7 @@ import datetime as dt
 from sqlmodel import Session, select
 
 from solodesk.db import make_engine
-from solodesk.models import Invoice, InvoiceLine, IssuedCopy, TimeEntry
+from solodesk.models import Invoice, InvoiceLine, IssuedCopy, Recurring, TimeEntry
 from solodesk.money import totals
 from solodesk.routers.reports import build_dashboard
 from solodesk.seed import seed
@@ -27,6 +27,9 @@ def test_seed_produces_consistent_books(tmp_path):
                 invoice.total_minor
             )
         assert not db.exec(select(TimeEntry).where(TimeEntry.started_at.is_not(None))).first()
+        [schedule] = db.exec(select(Recurring)).all()  # yearly hosting, next due in the future
+        assert db.get(Invoice, schedule.source_invoice_id).status in {"sent", "paid"}
+        assert schedule.start_date > on
 
         data = build_dashboard(db, on)
         assert data["by_currency"]["USD"]["overdue_count"] == 1

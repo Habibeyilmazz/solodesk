@@ -11,8 +11,9 @@ from sqlmodel import Session, select
 
 from .config import db_path_from_env
 from .db import make_engine, today
-from .models import Client, Invoice, InvoiceLine, Project, Settings, TimeEntry
+from .models import Client, Invoice, InvoiceLine, Project, Recurring, Settings, TimeEntry
 from .routers.invoices import _lines_from_time, _recalculate, issued_copy
+from .routers.recurring import add_months
 
 MONTHS_BACK = 8
 
@@ -209,6 +210,14 @@ def seed(db: Session, on: dt.date) -> None:
                         amount_minor=0,
                     )
                 )
+                if back == 2:  # the yearly hosting renewal repeats as its own invoice
+                    db.add(
+                        Recurring(
+                            source_invoice_id=invoice.id,
+                            every_months=12,
+                            start_date=add_months(issue, 12),
+                        )
+                    )
             _recalculate(invoice, lines)
             db.add_all(lines)
             number += 1
