@@ -6,6 +6,29 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security (round 3, security lens)
+
+- Login guessing is now capped across all addresses together: 50 failures per 15 minutes,
+  on top of the 5 per address. Before, uvicorn's default trust of `X-Forwarded-For` from
+  127.0.0.1 let any local process, or a web page that DNS-rebinds to localhost, rotate that
+  header and guess without limit (reproduced against a running instance; regression tests in
+  `tests/test_auth.py`). The trade-off, documented in the README: a sustained attack also
+  keeps the owner out until it stops.
+- CI pins every action to a commit SHA, checks out without persisting the token, and runs
+  `npm audit --audit-level=high`.
+
+### Checked, no change needed (round 3)
+
+- `npm audit` and `pip-audit` (against the installed backend dependencies): no known
+  vulnerabilities. Git history holds no secrets, `.env` or database files; commits use only
+  the noreply identity.
+- SQL is built with SQLModel expressions only; the SPA fallback refuses paths outside the
+  build folder; CSV cells are formula-escaped; React renders all user text escaped; no
+  outbound requests exist (no SSRF surface); the PDF filename only contains the validated
+  prefix characters.
+- Known and accepted: no request body size limit (put a reverse proxy in front before
+  exposing it), Swagger UI at `/api/docs` loads its assets from a CDN without a CSP.
+
 ### Added (round 2, design lens)
 
 - Dark mode that follows the system setting. Colours are tokens on `:root` in
