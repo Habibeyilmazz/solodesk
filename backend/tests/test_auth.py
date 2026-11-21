@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from solodesk.auth import LoginLimiter, hash_password, verify_password
 from solodesk.config import from_env
@@ -27,6 +28,31 @@ def test_limiter_blocks_after_max_failures_then_recovers():
     assert limiter.claim("a") == 0  # the window has passed
     limiter.reset("a")
     assert [limiter.claim("a") for _ in range(4)] == [0, 0, 0, 60]  # reset gives all three back
+
+
+def test_limiter_caps_failures_from_all_addresses_together():
+    now = [0.0]
+    limiter = LoginLimiter(max_failures=3, window=60, max_total=5, clock=lambda: now[0])
+    assert [limiter.claim(f"10.0.0.{i}") for i in range(6)] == [0, 0, 0, 0, 0, 60]
+    now[0] = 60
+    assert limiter.claim("10.0.0.99") == 0  # the window has passed
+    assert limiter.claim("ok") == 0
+    limiter.reset("ok")  # a successful login does not use up the shared budget
+    assert [limiter.claim(f"x{i}") for i in range(5)] == [0, 0, 0, 0, 60]
+
+
+def test_spoofed_forwarded_for_cannot_bypass_the_limit(app):
+    """uvicorn trusts X-Forwarded-For from 127.0.0.1, so a local caller can name any address."""
+    with TestClient(ProxyHeadersMiddleware(app, trusted_hosts="*")) as client:
+        codes = [
+            client.post(
+                "/api/auth/login",
+                json={"password": "guess"},
+                headers={"X-Forwarded-For": f"10.0.{i}.1"},
+            ).status_code
+            for i in range(52)
+        ]
+    assert codes == [401] * 50 + [429] * 2
 
 
 def test_api_requires_login(anon):

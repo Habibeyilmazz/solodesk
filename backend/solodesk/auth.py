@@ -36,18 +36,27 @@ def hash_token(token: str, key: bytes) -> str:
 
 
 class LoginLimiter:
-    """At most `max_failures` failed logins per client address within `window` seconds.
+    """At most `max_failures` failed logins per client address within `window` seconds,
+    and at most `max_total` from all addresses together.
+
+    The total cap is what bounds guessing: a client address can be faked (X-Forwarded-For
+    from a local process or a DNS-rebinding web page) or rotated (IPv6), the total cannot.
+    The price is that a sustained attack also locks the owner out until it stops.
 
     shortcut: kept in process memory, so it resets on restart and is per-process;
     move it to the database if solodesk ever runs with more than one worker.
     """
 
-    def __init__(self, max_failures: int = 5, window: int = 900, clock=time.monotonic):
+    def __init__(
+        self, max_failures: int = 5, window: int = 900, max_total: int = 50, clock=time.monotonic
+    ):
         self.max_failures = max_failures
+        self.max_total = max_total
         self.window = window
         self.clock = clock
         self._lock = threading.Lock()
         self._attempts: dict[str, deque[float]] = {}
+        self._all: deque[float] = deque()
 
     def claim(self, key: str) -> int:
         """Take one attempt for `key`. Returns 0, or the seconds to wait if none are left.
@@ -60,16 +69,20 @@ class LoginLimiter:
             if len(self._attempts) > 10_000:  # bound memory under a spray of source addresses
                 self._attempts.clear()
             attempts = self._attempts.setdefault(key, deque())
-            while attempts and now - attempts[0] >= self.window:
-                attempts.popleft()
-            if len(attempts) >= self.max_failures:
-                return max(1, int(attempts[0] + self.window - now))
+            for queue, limit in ((attempts, self.max_failures), (self._all, self.max_total)):
+                while queue and now - queue[0] >= self.window:
+                    queue.popleft()
+                if len(queue) >= limit:
+                    return max(1, int(queue[0] + self.window - now))
             attempts.append(now)
+            self._all.append(now)
             return 0
 
     def reset(self, key: str) -> None:
         with self._lock:
             self._attempts.pop(key, None)
+            if self._all:  # the successful attempt itself was no failure
+                self._all.pop()
 
 
 if __name__ == "__main__":
