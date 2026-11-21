@@ -72,6 +72,12 @@ jobs:
           head -c 5 invoice.pdf | grep -q '%PDF-'
           docker compose exec -T solodesk python -c \
             "import time; offset = time.strftime('%z'); assert offset == '+1400', offset"
+      - name: Back up the database the way the README says
+        run: |
+          docker compose stop
+          docker compose cp solodesk:/data/solodesk.db ./solodesk-backup.db
+          docker compose start
+          test "$(head -c 15 solodesk-backup.db)" = "SQLite format 3"
       - name: Container logs
         if: failure()
         run: docker compose logs

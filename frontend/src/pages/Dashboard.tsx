@@ -41,7 +41,8 @@ export default function Dashboard() {
       ) : (
         <p className="empty">
           Nothing invoiced yet. <Link to="/clients">Add a client</Link>, track some time, then{" "}
-          <Link to="/invoices/new">create your first invoice</Link>.
+          <Link to="/invoices/new">create your first invoice</Link>. Your business name and address
+          for the invoice header go in <Link to="/settings">Settings</Link>.
         </p>
       )}
 

@@ -18,7 +18,11 @@ make run    # installs what is missing, builds the UI, serves http://localhost:4
 ```
 
 The first run copies `.env.example` to `.env`. Sign in with the password in that file
-(`change-me-please`) and change it before you put real data in.
+(`change-me-please`). Before you put real data in, change `SOLODESK_PASSWORD` in `.env` and
+start solodesk again: that also signs out every session opened with the old password. Then
+fill in your business details under Settings; they are the header of every invoice.
+
+If `python3` on your machine is older than 3.12, name a newer one: `make run PYTHON=python3.12`.
 
 With Docker instead:
 
@@ -27,6 +31,8 @@ cp .env.example .env          # then edit SOLODESK_PASSWORD
 docker compose up -d          # http://localhost:4150
 docker compose run --rm solodesk python -m solodesk.seed   # optional demo data
 ```
+
+After pulling a newer version, rebuild with `docker compose up -d --build`.
 
 ## What it does
 
@@ -40,7 +46,8 @@ docker compose run --rm solodesk python -m solodesk.seed   # optional demo data
 - **Status flow.** Draft, sent, paid, with overdue shown automatically once the due date passes.
   A payment marked by mistake can be undone.
 - **PDF export** with your business details, the client's, and Turkish characters and ₺ intact
-  ([sample](docs/sample-invoice.pdf)).
+  ([sample](docs/sample-invoice.pdf)). The bundled font has no Chinese, Japanese or Korean
+  glyphs, so text in those scripts will not print.
 - **Dashboard.** Revenue per month for the last 12 months, unpaid and overdue totals with the
   invoices to chase, hours this week, and top clients. Shown per currency; nothing is converted.
 - **CSV export** of invoices and time entries.
@@ -58,7 +65,14 @@ All screenshots are of the running app with the demo data from `make seed`.
 
 One FastAPI process serves a JSON API under `/api` and the built React app everywhere else.
 Data lives in `data/solodesk.db` (SQLite). Back it up by copying that file while solodesk is
-stopped, or with `sqlite3 data/solodesk.db ".backup copy.db"` while it runs.
+stopped, or with `sqlite3 data/solodesk.db ".backup copy.db"` while it runs. With Docker the
+database is in the `solodesk-data` volume:
+
+```sh
+docker compose stop
+docker compose cp solodesk:/data/solodesk.db ./solodesk-backup.db
+docker compose start
+```
 
 ```
 backend/solodesk/   FastAPI app: models, routers, money arithmetic, PDF, seed script
@@ -78,10 +92,14 @@ times rate equals the amount printed on the invoice.
 
 **Sign-in.** The password comes from `SOLODESK_PASSWORD` and is hashed with scrypt at startup;
 set `SOLODESK_PASSWORD_HASH` instead to keep the plain password out of the environment
-(`.venv/bin/python -m solodesk.auth` prints a hash). Signing in creates a server-side session stored as a
-SHA-256 hash, sent in an `HttpOnly`, `SameSite=Strict` cookie. Every write must also carry the
-session's CSRF token in an `X-CSRF-Token` header. Five failed logins from one address lock that
-address out for 15 minutes.
+(`.venv/bin/python -m solodesk.auth` prints a hash). Signing in creates a server-side session
+that lasts 14 days, sent in an `HttpOnly`, `SameSite=Strict` cookie. The database keeps only an
+HMAC of the cookie, keyed from the password, so a copy of the database holds no usable cookies
+and changing the password ends every session. Every write must also carry the session's CSRF
+token in an `X-CSRF-Token` header. Five failed logins from one address lock that address out
+for 15 minutes. With Docker, or behind a reverse proxy on another machine, every visitor
+arrives from the same address, so the lockout then applies to all of them together; sessions
+that are already open keep working.
 
 **API docs.** The OpenAPI schema and Swagger UI are at `/api/docs` on a running instance.
 
@@ -89,11 +107,11 @@ address out for 15 minutes.
 
 | Variable | Meaning |
 | --- | --- |
-| `SOLODESK_PASSWORD` | The sign-in password, at least 8 characters. Required unless a hash is set. |
+| `SOLODESK_PASSWORD` | The sign-in password, at least 8 characters. Required unless a hash is set. Single-quote it in `.env` if it has spaces or symbols. |
 | `SOLODESK_PASSWORD_HASH` | A hash from `.venv/bin/python -m solodesk.auth`, used instead of the password. Single-quote it in `.env`. |
 | `SOLODESK_DATA_DIR` | Folder for the SQLite database. Default `data`. |
 | `SOLODESK_COOKIE_SECURE` | Set to `1` when serving over HTTPS so the cookie is marked `Secure`. |
-| `TZ` | Time zone that decides when "today" starts for timers and due dates. |
+| `TZ` | Time zone that decides when "today" starts for timers and due dates, for example `Europe/Istanbul`. Default: the machine's zone with `make run`, UTC with Docker. |
 
 solodesk listens on `127.0.0.1` by default. To reach it from elsewhere, put a reverse proxy
 with TLS in front and set `SOLODESK_COOKIE_SECURE=1`.
@@ -108,7 +126,8 @@ make e2e    # Playwright tests against the built app (once: cd frontend && npx p
 ```
 
 CI runs all of these on every push, then builds the Docker image and checks that the
-container starts and serves the app.
+container starts, serves the app, produces an invoice PDF, honours `TZ` and can be backed up
+as described above.
 
 ## Roadmap
 
@@ -118,6 +137,8 @@ Not built yet:
 - Freezing client and business details on a sent invoice (the PDF currently prints the current ones)
 - Credit notes or voiding a sent invoice
 - Adding more tracked time to an existing draft, and per-entry detail lines
+- A warning before leaving a draft invoice with unsaved edits
+- A phone layout for the wider tables (today they scroll sideways)
 - Expenses and recurring invoices
 - Emailing invoices from the app
 - Schema migrations (0.1 creates tables on first start and has no upgrade path yet)
