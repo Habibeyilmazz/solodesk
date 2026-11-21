@@ -6,6 +6,7 @@ import { Dialog, ErrorNote, Field, PageHeader } from "../components/ui.tsx";
 import { CURRENCIES } from "../lib/money.ts";
 import {
   addDays,
+  daysToCover,
   durationToInput,
   formatDuration,
   formatWeekday,
@@ -112,9 +113,11 @@ export default function Time() {
         <Dialog title="Import from Toggl Track" onClose={() => setImporting(false)}>
           <ImportForm
             onCancel={() => setImporting(false)}
-            onImported={(message) => {
+            onImported={(message, earliest) => {
               setImporting(false);
               setImported(message);
+              // imported history is usually older than the listed range: widen it to show it all
+              if (earliest) setDays(Math.max(days, daysToCover(earliest, PAGE_DAYS)));
               bump();
             }}
           />
@@ -235,12 +238,16 @@ type ImportResult = {
   added: number;
   minutes: number;
   skipped_duplicates: number;
+  earliest_date: string | null;
   new_clients: string[];
   new_projects: string[];
 };
 
 /** Pick a Toggl CSV, see what it would add (a dry run), then import it. */
-function ImportForm(props: { onCancel: () => void; onImported: (message: string) => void }) {
+function ImportForm(props: {
+  onCancel: () => void;
+  onImported: (message: string, earliest: string | null) => void;
+}) {
   const [csv, setCsv] = useState("");
   const [currency, setCurrency] = useState("TRY");
   const [preview, setPreview] = useState<ImportResult | null>(null);
@@ -268,6 +275,7 @@ function ImportForm(props: { onCancel: () => void; onImported: (message: string)
       props.onImported(
         `Imported ${r.added} ${r.added === 1 ? "entry" : "entries"} (${formatDuration(r.minutes)}).` +
           (r.skipped_duplicates ? ` Skipped ${r.skipped_duplicates} already here.` : ""),
+        r.earliest_date,
       );
     });
   }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addDays, durationToInput, formatClock, formatDuration, parseDuration } from "./time.ts";
+import { addDays, daysToCover, durationToInput, formatClock, formatDuration, parseDuration } from "./time.ts";
 
 test("parseDuration accepts the usual ways of writing time", () => {
   assert.equal(parseDuration("1:30"), 90);
@@ -32,4 +32,12 @@ test("formatting durations", () => {
 test("addDays crosses month ends", () => {
   assert.equal(addDays("2026-02-27", 2), "2026-03-01");
   assert.equal(addDays("2026-01-01", -1), "2025-12-31");
+});
+
+test("daysToCover reaches back to a date in whole pages", () => {
+  assert.equal(daysToCover("2026-11-20", 30, "2026-11-22"), 30); // inside the first page
+  assert.equal(daysToCover("2026-10-23", 30, "2026-11-22"), 30); // exactly 30 days back
+  assert.equal(daysToCover("2026-10-22", 30, "2026-11-22"), 60);
+  assert.equal(daysToCover("2026-03-30", 30, "2026-11-22"), 240); // across the DST change
+  assert.equal(daysToCover("2026-12-01", 30, "2026-11-22"), 30); // future dates: one page
 });

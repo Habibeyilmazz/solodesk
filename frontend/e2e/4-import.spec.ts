@@ -23,6 +23,8 @@ test("import time from a Toggl CSV", async ({ page }) => {
   await dialog.getByRole("button", { name: "Import" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status")).toHaveText("Imported 2 entries (3h 15m).");
+  // months older than the 30 days listed by default, yet shown right after the import
+  await expect(page.getByRole("cell", { name: "Product photos" })).toBeVisible();
 
   // the same file again: nothing new, so nothing to import
   await page.getByRole("button", { name: "Import from Toggl" }).click();

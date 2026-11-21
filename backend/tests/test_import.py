@@ -21,7 +21,9 @@ def row(client="Acme Yazılım", project="Website", desc="Header fix", billable=
 def test_import_matches_existing_names_and_creates_missing(api, acme):
     csv = toggl(
         row(client="acme yazılım", project="WEBSITE"),  # matched, ignoring case
-        row(project="Logo", duration="00:00:20", billable="No"),  # new project, rounds up to 1m
+        row(
+            project="Logo", duration="00:00:20", billable="No", date="2025-01-15"
+        ),  # new project, rounds up to 1m
         row(client="Kuzey Kafe", project="Menu", desc="Menu, with a comma", duration="25:00:00"),
     )
     r = api.post("/api/import/toggl", json={"csv": csv, "currency": "EUR"})
@@ -37,6 +39,7 @@ def test_import_matches_existing_names_and_creates_missing(api, acme):
         "added": 3,
         "minutes": 90 + 1 + 136,
         "skipped_duplicates": 0,
+        "earliest_date": "2025-01-15",  # the oldest added entry
         "new_clients": ["Kuzey Kafe"],
         "new_projects": ["Acme Yazılım: Logo", "Kuzey Kafe: Menu"],
     }
@@ -54,6 +57,7 @@ def test_importing_the_same_file_twice_adds_nothing(api, acme):
     assert api.post("/api/import/toggl", json={"csv": csv}).json()["added"] == 2
     again = api.post("/api/import/toggl", json={"csv": csv}).json()
     assert again["added"] == 0 and again["skipped_duplicates"] == 2
+    assert again["earliest_date"] is None
     assert len(api.get("/api/time").json()) == 2
 
 

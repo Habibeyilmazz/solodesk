@@ -110,6 +110,7 @@ def import_toggl(body: TogglImportIn, db: Session = Depends(get_db)) -> dict:
     }
     new_clients, new_projects = [], []
     added = skipped = minutes = 0
+    earliest = None  # so the UI can show entries older than the range it lists
     for row in rows:
         client = clients.get(row["client"].lower())
         if client is None:
@@ -140,6 +141,7 @@ def import_toggl(body: TogglImportIn, db: Session = Depends(get_db)) -> dict:
         )
         added += 1
         minutes += row["minutes"]
+        earliest = min(earliest or row["date"], row["date"])
     if body.dry_run:
         db.rollback()
     else:
@@ -149,6 +151,7 @@ def import_toggl(body: TogglImportIn, db: Session = Depends(get_db)) -> dict:
         "added": added,
         "minutes": minutes,
         "skipped_duplicates": skipped,
+        "earliest_date": earliest,
         "new_clients": new_clients,
         "new_projects": new_projects,
     }

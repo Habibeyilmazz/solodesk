@@ -49,6 +49,12 @@ export function addDays(iso: string, days: number): string {
   return isoDate(d);
 }
 
+/** Days back from today, in whole pages of `page` days, for a list to reach back to `iso`. */
+export function daysToCover(iso: string, page: number, today: string = isoDate()): number {
+  const days = Math.round((Date.parse(today) - Date.parse(iso)) / 86_400_000);
+  return Math.max(1, Math.ceil(days / page)) * page;
+}
+
 const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
