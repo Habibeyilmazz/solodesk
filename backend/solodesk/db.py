@@ -2,7 +2,7 @@ import datetime as dt
 from pathlib import Path
 
 from sqlalchemy import event
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 
 from . import models  # noqa: F401  (registers the tables)
 from .models import Settings
@@ -36,6 +36,3 @@ def make_engine(db_path: Path | str):
 def today() -> dt.date:
     """The server's local date. Set TZ to control where midnight falls."""
     return dt.date.today()
-
-
-__all__ = ["Session", "make_engine", "select", "today"]
