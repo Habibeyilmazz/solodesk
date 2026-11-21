@@ -47,6 +47,11 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
   keeps printing your details and the client's as they were on the day it was sent.
 - **Status flow.** Draft, sent, paid, with overdue shown automatically once the due date passes.
   A payment marked by mistake can be undone.
+- **Voiding.** A sent invoice that should not have gone out (wrong hours, wrong client, a job
+  that was called off) can be voided. It keeps its number, so the sequence has no gap, and
+  stays in the list, the CSV and its PDF marked void. It stops counting as unpaid or overdue
+  on the dashboard, and its tracked time becomes unbilled again, ready for a corrected
+  invoice. Voiding is final; a paid invoice has to be marked unpaid first.
 - **PDF export** with your business details, the client's, and Turkish characters and ₺ intact
   ([sample](docs/sample-invoice.pdf)). The bundled font has no Chinese, Japanese or Korean
   glyphs, so text in those scripts will not print.
@@ -142,7 +147,7 @@ as described above.
 Not built yet:
 
 - Fixed-amount discounts and per-line tax rates
-- Credit notes or voiding a sent invoice
+- Credit notes for part of a sent invoice, and a date recorded for voiding
 - Adding more tracked time to an existing draft, and per-entry detail lines
 - A warning before leaving a draft invoice with unsaved edits
 - Screens narrower than about 360px: client project tables and invoice lines still scroll sideways

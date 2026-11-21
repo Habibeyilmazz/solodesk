@@ -6,6 +6,26 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added (round 4, feature lens)
+
+- Void a sent or overdue invoice. Before, a sent invoice with a mistake had no way out: it
+  stayed unpaid and overdue on the dashboard forever and its hours could never be billed
+  again. Now **Void invoice** (with a confirmation) keeps the number and lines, shows a Void
+  stamp, a Void filter on Invoices and `void` in the CSV, prints "VOID: not payable" on the
+  PDF, drops the invoice from unpaid, overdue and revenue figures, and releases its tracked
+  time so a corrected invoice can be made from it. Void is final; a paid invoice must be
+  marked unpaid first. API: `POST /api/invoices/{id}/status` with `{"status": "void"}`.
+  No schema change (status is a text column). Tests in `tests/test_invoices.py`,
+  `tests/test_reports.py` and `e2e/2-housekeeping.spec.ts`.
+- Not done: no date is stored for when an invoice was voided (it would need a new column, and
+  there are no migrations yet), and there are no partial credit notes.
+
+### Checked, no change needed (round 4)
+
+- Reported gaps re-checked: the missing request body size limit is a documented, accepted
+  limit for a localhost app behind a proxy, not a bug; tables below ~360px still scroll, as
+  the README's roadmap says.
+
 ### Security (round 3, security lens)
 
 - Login guessing is now capped across all addresses together: 50 failures per 15 minutes,
