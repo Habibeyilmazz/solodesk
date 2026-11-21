@@ -10,7 +10,7 @@ from .auth import LoginLimiter
 from .config import Config, from_env
 from .db import make_engine
 from .deps import require_auth
-from .routers import auth, clients, invoices, reports, settings, time
+from .routers import auth, clients, imports, invoices, reports, settings, time
 
 CSP = (
     "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
@@ -67,7 +67,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         return {"status": "ok", "version": __version__}
 
     app.include_router(auth.router)
-    for module in (clients, time, invoices, reports, settings):
+    for module in (clients, time, invoices, reports, settings, imports):
         app.include_router(module.router, dependencies=[Depends(require_auth)])
 
     @app.api_route(

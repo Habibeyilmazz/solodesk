@@ -208,6 +208,12 @@ class StatusIn(Body):
     paid_on: Day | None = None
 
 
+class TogglImportIn(Body):
+    csv: Annotated[str, StringConstraints(max_length=5_000_000)]  # the file's text
+    currency: Currency = "TRY"  # for clients the import creates
+    dry_run: bool = False
+
+
 class SettingsIn(Body):
     business_name: Name
     business_address: Text = ""
