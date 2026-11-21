@@ -20,6 +20,16 @@ All notable changes to solodesk are recorded here. The format follows
   Only Toggl's detailed report is read (columns Client, Project, Description, Billable,
   Start date in YYYY-MM-DD, Duration as HH:MM:SS); Clockify and Harvest exports are not.
   The parser was written against Toggl's documented column names, not a real account export.
+- Add tracked time to an existing draft (**Add tracked time** on the draft editor). Before,
+  hours logged after a draft was made could only be billed by deleting the draft and starting
+  over. Hours for a project already on the draft are added to its line, and the line's date
+  span is refreshed unless its description was edited; other projects get a new line. Unsaved
+  edits are saved first. API: `POST /api/invoices/{id}/time` with `{"time_entry_ids": [...]}`.
+  Tests in `tests/test_invoices.py` and `e2e/4-import.spec.ts`.
+- Reported gaps re-checked: no social-preview image (still a web-only upload), no voided-on
+  date, no partial credit notes, no homepage and an issue-based security contact remain as
+  they were; none is a bug.
+- Ran `make test` (75 pytest, 10 unit), `make lint` and `make e2e` (5 tests) locally: green.
 
 ### Added (round 6, launch lens)
 

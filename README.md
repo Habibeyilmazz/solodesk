@@ -45,7 +45,9 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
 - **Time tracking.** A timer bar on every page (start, stop, one timer at a time) and manual
   entries typed as `1:30`, `1.5` or `90m`. Entries can be marked not billable.
 - **Invoices.** Build a draft from a client's unbilled time (one line per project), from fixed
-  line items, or both. Percentage discount and tax, totals updated as you type.
+  line items, or both. Percentage discount and tax, totals updated as you type. Time logged
+  after the draft was made can be added to it later: hours for a project already on the
+  draft join that project's line.
 - **Sequential numbers.** An invoice gets its number (`INV-0001`, prefix configurable) when you
   mark it sent, so deleted drafts never leave a gap. Sent invoices are locked, and their PDF
   keeps printing your details and the client's as they were on the day it was sent.
@@ -177,7 +179,7 @@ Not built yet:
 
 - Fixed-amount discounts and per-line tax rates
 - Credit notes for part of a sent invoice, and a date recorded for voiding
-- Adding more tracked time to an existing draft, and per-entry detail lines
+- Per-entry detail lines on invoices
 - A warning before leaving a draft invoice with unsaved edits
 - Screens narrower than about 360px: client project tables and invoice lines still scroll sideways
 - Expenses and recurring invoices
