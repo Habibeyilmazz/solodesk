@@ -34,7 +34,7 @@ def from_env() -> Config:
                 "before starting solodesk. See .env.example."
             )
         if password == "change-me-please":
-            print("solodesk: using the example password. Change SOLODESK_PASSWORD.", file=sys.stderr)
+            print("solodesk: example password in use, change SOLODESK_PASSWORD", file=sys.stderr)
         stored = hash_password(password)
     static = Path(
         os.environ.get("SOLODESK_STATIC_DIR", Path(__file__).parents[2] / "frontend" / "dist")
