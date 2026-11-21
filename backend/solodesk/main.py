@@ -6,13 +6,14 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.gzip import GZipMiddleware
 
 from . import __version__
 from .auth import LoginLimiter
 from .config import Config, from_env
 from .db import make_engine
-from .deps import SAFE_METHODS, current_session, require_auth
+from .deps import current_session, require_auth
 from .routers import auth, clients, imports, invoices, reports, settings, time
 
 CSP = (
@@ -47,12 +48,17 @@ class BodyLimit:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         limit = MAX_ANON_BODY_BYTES
-        if scope["method"] not in SAFE_METHODS:
-            with Session(scope["app"].state.engine) as db:
-                if current_session(Request(scope), db):
-                    limit = MAX_BODY_BYTES
+
+        async def fits(size: int) -> bool:
+            nonlocal limit
+            # The session is looked up only for a body past the small limit, and off the
+            # event loop: every transaction takes SQLite's write lock (see db.py).
+            if size > limit == MAX_ANON_BODY_BYTES and await run_in_threadpool(signed_in, scope):
+                limit = MAX_BODY_BYTES
+            return size <= limit
+
         length = dict(scope["headers"]).get(b"content-length", b"")
-        if length.isdigit() and int(length) > limit:
+        if length.isdigit() and not await fits(int(length)):
             response = JSONResponse({"detail": "Request body too large"}, 413)
             return await response(scope, receive, send)
         received = 0
@@ -61,11 +67,16 @@ class BodyLimit:
             nonlocal received
             message = await receive()
             received += len(message.get("body", b""))
-            if received > limit:
+            if not await fits(received):
                 raise HTTPException(413, "Request body too large")
             return message
 
         await self.app(scope, counted_receive, send)
+
+
+def signed_in(scope) -> bool:
+    with Session(scope["app"].state.engine) as db:
+        return current_session(Request(scope), db) is not None
 
 
 def create_app(config: Config | None = None) -> FastAPI:
