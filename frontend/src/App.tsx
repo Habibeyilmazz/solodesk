@@ -54,6 +54,9 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
   return (
     <RefreshContext.Provider value={refresh}>
       <div className="shell">
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
         <header className="cover">
           <NavLink to="/" className="wordmark">
             solodesk
@@ -71,7 +74,7 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
         </header>
         <div className="desk">
           <TimerBar />
-          <main>
+          <main id="main" tabIndex={-1}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/time" element={<Time />} />

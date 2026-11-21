@@ -59,6 +59,9 @@ export function Stamp({ status }: { status: InvoiceStatus }) {
 }
 
 export function PageHeader(props: { title: string; children?: ReactNode }) {
+  useEffect(() => {
+    document.title = `${props.title} | solodesk`;
+  }, [props.title]);
   return (
     <div className="page-header">
       <h1>{props.title}</h1>
