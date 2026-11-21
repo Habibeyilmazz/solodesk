@@ -63,6 +63,16 @@ After pulling a newer version, rebuild with `docker compose up -d --build`.
   retyping it. The copy keeps the fixed lines, tax, discount, notes and currency, is dated
   today with your current payment terms, and leaves out lines built from tracked time (those
   hours are already billed); add new time to it with **Add tracked time**.
+- **Recurring invoices.** **Repeat** on a sent, paid or void invoice makes a draft copy of
+  it every month, 3 months, 6 months or year, from a first date you pick. Like a copy, a
+  draft keeps the fixed lines, tax, discount and notes and leaves out tracked time, so only
+  invoices with at least one fixed line can repeat. Drafts are never sent for you: you check
+  each one and send it. solodesk makes due drafts when it starts and every 10 minutes while it
+  runs, so drafts that fell due while it was stopped appear on the next start, each dated its
+  own day. A first date in the past makes the missed drafts at once (at most a year back).
+  Day 31 becomes the month's last day (31 Jan, 28 Feb, 31 Mar). Schedules are listed under
+  the invoices, with what each draft will total, and **Stop** ends one; drafts already made
+  stay ([screenshot](docs/screenshots/invoice-repeat.png)).
 - **PDF export** with your business details, the client's, and Turkish characters and ₺ intact
   ([sample](docs/sample-invoice.pdf)). The bundled font has no Chinese, Japanese or Korean
   glyphs, so text in those scripts will not print.
@@ -170,7 +180,7 @@ something else when you need what it leaves out.
 
 | | Good at | Pick it over solodesk when |
 | --- | --- | --- |
-| [Invoice Ninja](https://github.com/invoiceninja/invoiceninja) | Self-hostable or hosted invoicing with online payments, recurring invoices, expenses, client portal, many languages | You need clients to pay online, recurring billing or multiple users |
+| [Invoice Ninja](https://github.com/invoiceninja/invoiceninja) | Self-hostable or hosted invoicing with online payments, recurring invoices, expenses, client portal, many languages | You need clients to pay online, invoices sent automatically or multiple users |
 | [Kimai](https://github.com/kimai/kimai) | Self-hosted time tracking for teams, with plugins and reports | Time tracking for several people is the main job |
 | [Crater](https://github.com/crater-invoice-inc/crater) | Self-hosted invoices and estimates | You want estimates and expenses in one app |
 | Spreadsheet plus a word processor | Zero setup, total flexibility | You send a handful of invoices a year |
@@ -190,7 +200,8 @@ Not built yet:
 - Per-entry detail lines on invoices
 - A warning before leaving a draft invoice with unsaved edits
 - Screens narrower than about 360px: client project tables and invoice lines still scroll sideways
-- Expenses and recurring invoices
+- Expenses
+- Sending recurring invoices automatically (they are made as drafts)
 - Emailing invoices from the app
 - Schema migrations (0.1 creates tables on first start and has no upgrade path yet)
 - A Turkish interface and locale-specific number formats

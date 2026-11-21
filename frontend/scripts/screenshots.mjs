@@ -36,6 +36,13 @@ await desktop.shot("/clients", "clients");
 await desktop.shot("/invoices", "invoices");
 if (pick("draft")) await desktop.shot(`/invoices/${pick("draft")}`, "invoice-draft");
 if (pick("overdue")) await desktop.shot(`/invoices/${pick("overdue")}`, "invoice-overdue");
+const [schedule] = await (await desktop.page.request.get(`${base}/api/recurring`)).json();
+if (schedule) {
+  await desktop.page.goto(`${base}/invoices/${schedule.source_invoice_id}`);
+  await desktop.page.getByRole("button", { name: "Repeat", exact: true }).click();
+  await desktop.page.getByLabel("How often").selectOption({ label: "Every year" });
+  await desktop.page.screenshot({ path: `${out}invoice-repeat.png` });
+}
 if (pick("paid")) {
   const pdf = await desktop.page.request.get(`${base}/api/invoices/${pick("paid")}/pdf`);
   writeFileSync(`${out}../sample-invoice.pdf`, await pdf.body());

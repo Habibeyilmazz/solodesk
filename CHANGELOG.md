@@ -6,6 +6,33 @@ All notable changes to solodesk are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added (round 15, feature lens)
+
+- **Recurring invoices.** The most-reported open gap, and the next step after round 12's
+  "Copy to new draft": a retainer or a yearly hosting renewal no longer needs remembering.
+  **Repeat** on a sent, paid or void invoice opens a dialog (every 1, 3, 6 or 12 months, first
+  draft date); the Invoices page lists schedules with the next date and what each draft will
+  total, and **Stop** ends one. Each draft is a copy as in round 12 (fixed lines only), dated
+  its scheduled day, due after the current payment terms. Drafts are never sent automatically.
+- How it runs: a background task in the app's lifespan calls `make_due` at start and every 10
+  minutes (`backend/solodesk/main.py`); creating a schedule also runs it. A schedule stores
+  `start_date` and how many drafts it has `made`, and the next date is always computed from the
+  start, so month-end days do not drift (31 Jan, 28 Feb, 31 Mar). `BEGIN IMMEDIATE` serialises
+  the tick with requests, so a draft is never made twice.
+- New table `recurring`, created automatically on existing databases (no column changes, so no
+  migration needed). API: `GET/POST /api/recurring`, `DELETE /api/recurring/{id}`. Refused:
+  a draft source (409, it can still change), a source with only tracked-time lines (409, the
+  copy would be empty; found by using the seeded app), a first date more than a year back (422).
+- `make seed` adds a yearly schedule for the seeded "Domain and hosting" invoice.
+- Tests: `backend/tests/test_recurring.py` (month clamping, catch-up, idempotence, totals, time
+  lines, validation, stop, drafts made on startup), `addMonths` in `time.test.ts`, and
+  `frontend/e2e/5-recurring.spec.ts` (repeat INV-0001 yearly, see the draft, stop).
+- Not done: sending recurring invoices by itself (needs email, which solodesk does not have);
+  editing a schedule (stop it and make a new one); a link from a draft back to its schedule.
+  Reported gaps unchanged: Toggl parser untested on a real export (no account to make one);
+  PDF font lacks CJK glyphs; no homepage. Commits from this round are attributed to the model
+  that actually ran it (Opus 5.5), per the harness.
+
 ### Changed (round 14, launch lens)
 
 - Dockerfile base images are pinned to digests (node:22-slim, python:3.12-slim as of 2026-11-22), so the
