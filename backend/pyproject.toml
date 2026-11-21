@@ -1,0 +1,36 @@
+[project]
+name = "solodesk"
+version = "0.1.0"
+description = "Self-hosted back office for freelancers: clients, projects, time tracking and invoices."
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.165",
+    "uvicorn[standard]>=0.54",
+    "sqlmodel>=0.0.50",
+    "fpdf2>=2.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9", "httpx2>=2.16", "ruff>=0.17"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["solodesk"]
+
+[tool.setuptools.package-data]
+solodesk = ["fonts/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]  # FastAPI's Depends() in argument defaults is the framework idiom
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

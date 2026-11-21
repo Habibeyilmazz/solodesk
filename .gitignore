@@ -1,0 +1,30 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# data
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
