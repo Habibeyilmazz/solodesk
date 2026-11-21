@@ -34,3 +34,32 @@ test("import time from a Toggl CSV", async ({ page }) => {
   await page.getByRole("link", { name: "Clients", exact: true }).click();
   await expect(page.getByRole("region", { name: "Lumen Optik" })).toContainText("Billed in EUR");
 });
+
+// The imported billable entry goes onto a draft that already exists.
+test("add tracked time to an existing draft", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Password").fill("e2e-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("link", { name: "Invoices", exact: true }).click();
+  await page.getByRole("link", { name: "New invoice" }).click();
+  await page.getByLabel("Client").selectOption({ label: "Lumen Optik (EUR)" });
+  await page.getByRole("checkbox", { name: /Include Catalogue/ }).uncheck();
+  await page.getByRole("button", { name: "Create empty draft" }).click();
+  await expect(page.getByRole("heading", { name: "Draft invoice" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Add line" }).click();
+  await page.getByLabel("Line 1 description").fill("Retainer"); // unsaved, must survive
+  await page.getByLabel("Line 1 unit price").fill("100");
+  await page.getByRole("button", { name: "Add tracked time" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Add 2h 30m" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel("Line 1 description")).toHaveValue("Retainer");
+  await expect(page.getByLabel("Line 2 description")).toHaveValue("Catalogue: 3 Feb 2026");
+  await expect(page.getByLabel("Line 2 quantity")).toHaveValue("2.5");
+  await expect(page.getByRole("button", { name: "Saved" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Add tracked time" }).click();
+  await expect(dialog).toContainText("No unbilled time for this client.");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+});

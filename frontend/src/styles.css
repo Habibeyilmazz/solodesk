@@ -1111,6 +1111,11 @@ dialog {
   box-shadow: 0 18px 50px rgb(5 8 16 / 0.3);
 }
 
+/* a list to pick from needs room for its columns */
+dialog:has(table) {
+  width: min(48rem, calc(100vw - 2rem));
+}
+
 dialog::backdrop {
   background: var(--shade);
 }

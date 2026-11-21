@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, type Invoice, useAction, useLoad } from "../api.ts";
-import { ErrorNote, Field, Stamp } from "../components/ui.tsx";
+import { api, type Invoice, type TimeEntry, useAction, useLoad } from "../api.ts";
+import { TimePicker, toggled } from "../components/TimePicker.tsx";
+import { Dialog, ErrorNote, Field, Stamp } from "../components/ui.tsx";
 import {
   formatMoney,
   hundredthsToInput,
@@ -10,7 +11,7 @@ import {
   totals,
   trimHundredths,
 } from "../lib/money.ts";
-import { formatDate, isoDate } from "../lib/time.ts";
+import { formatDate, formatDuration, isoDate } from "../lib/time.ts";
 import { useRefresh } from "../refresh.ts";
 
 export default function InvoiceDetail() {
@@ -215,6 +216,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   const navigate = useNavigate();
   const [form, setForm] = useState(() => toForm(invoice));
   const [dirty, setDirty] = useState(false);
+  const [addingTime, setAddingTime] = useState(false);
   const { busy, error, setError, run } = useAction();
   const money = (minor: number) => formatMoney(minor, invoice.currency);
 
@@ -279,6 +281,20 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
     if (!(await save())) return;
     await run(async () => {
       await api(`/invoices/${invoice.id}/status`, { method: "POST", body: { status: "sent" } });
+      bump();
+    });
+  }
+
+  async function addTime(ids: number[]) {
+    setAddingTime(false);
+    if (dirty && !(await save())) return; // the response replaces the form, so keep edits first
+    await run(async () => {
+      const saved = await api<Invoice>(`/invoices/${invoice.id}/time`, {
+        method: "POST",
+        body: { time_entry_ids: ids },
+      });
+      setForm(toForm(saved));
+      setDirty(false);
       bump();
     });
   }
@@ -391,6 +407,9 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
               }
             >
               Add line
+            </button>{" "}
+            <button type="button" className="btn" onClick={() => setAddingTime(true)}>
+              Add tracked time
             </button>
           </p>
 
@@ -461,6 +480,52 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
           Delete draft
         </button>
       </div>
+
+      {addingTime && (
+        <Dialog title="Add tracked time" onClose={() => setAddingTime(false)}>
+          <AddTime clientId={invoice.client_id} onAdd={addTime} onCancel={() => setAddingTime(false)} />
+        </Dialog>
+      )}
     </>
+  );
+}
+
+/** Pick more of the client's unbilled time. Hours for a project already on the draft join its line. */
+function AddTime(props: { clientId: number; onAdd: (ids: number[]) => void; onCancel: () => void }) {
+  const entries = useLoad(
+    () => api<TimeEntry[]>(`/time?unbilled=true&client_id=${props.clientId}&limit=5000`),
+    [props.clientId],
+  );
+  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const list = entries.data ?? [];
+  const included = list.filter((e) => !excluded.has(e.id));
+  const minutes = included.reduce((sum, e) => sum + e.minutes, 0);
+
+  return (
+    <div className="stack">
+      <ErrorNote message={entries.error} />
+      {entries.data &&
+        (list.length === 0 ? (
+          <p className="muted">No unbilled time for this client.</p>
+        ) : (
+          <>
+            <TimePicker entries={list} excluded={excluded} onToggle={(id) => setExcluded(toggled(excluded, id))} />
+            <p className="muted">Hours for a project already on this draft are added to its line.</p>
+          </>
+        ))}
+      <div className="form-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={included.length === 0}
+          onClick={() => props.onAdd(included.map((e) => e.id))}
+        >
+          {included.length > 0 ? `Add ${formatDuration(minutes)}` : "Add time"}
+        </button>
+        <button type="button" className="btn" onClick={props.onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }

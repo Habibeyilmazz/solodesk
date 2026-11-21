@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Client, type Invoice, type TimeEntry, useAction, useLoad } from "../api.ts";
+import { TimePicker, toggled } from "../components/TimePicker.tsx";
 import { ErrorNote, Field, PageHeader } from "../components/ui.tsx";
-import { formatDate, formatDuration } from "../lib/time.ts";
+import { formatDuration } from "../lib/time.ts";
 import { useRefresh } from "../refresh.ts";
 
 export default function InvoiceNew() {
@@ -26,12 +27,6 @@ export default function InvoiceNew() {
   const list = entries.data ?? [];
   const included = list.filter((e) => !excluded.has(e.id));
   const minutes = included.reduce((sum, e) => sum + e.minutes, 0);
-
-  function toggle(id: number) {
-    const next = new Set(excluded);
-    if (!next.delete(id)) next.add(id);
-    setExcluded(next);
-  }
 
   function create() {
     run(async () => {
@@ -83,37 +78,7 @@ export default function InvoiceNew() {
             lines.
           </p>
         ) : (
-          <table className="ledger pick stacks">
-            <thead>
-              <tr>
-                <th scope="col">
-                  <span className="sr-only">Include</span>
-                </th>
-                <th scope="col">Date</th>
-                <th scope="col">Project</th>
-                <th scope="col">Description</th>
-                <th scope="col" className="num">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((entry) => (
-                <tr key={entry.id}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      aria-label={`Include ${entry.project_name}, ${formatDate(entry.date)}, ${formatDuration(entry.minutes)}`}
-                      checked={!excluded.has(entry.id)}
-                      onChange={() => toggle(entry.id)}
-                    />
-                  </td>
-                  <td className="small">{formatDate(entry.date)}</td>
-                  <td>{entry.project_name}</td>
-                  <td className="grow">{entry.description}</td>
-                  <td className="num">{formatDuration(entry.minutes)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TimePicker entries={list} excluded={excluded} onToggle={(id) => setExcluded(toggled(excluded, id))} />
         )}
 
         <ErrorNote message={error} />
