@@ -76,7 +76,7 @@ times rate equals the amount printed on the invoice.
 
 **Sign-in.** The password comes from `SOLODESK_PASSWORD` and is hashed with scrypt at startup;
 set `SOLODESK_PASSWORD_HASH` instead to keep the plain password out of the environment
-(`python -m solodesk.auth` prints a hash). Signing in creates a server-side session stored as a
+(`.venv/bin/python -m solodesk.auth` prints a hash). Signing in creates a server-side session stored as a
 SHA-256 hash, sent in an `HttpOnly`, `SameSite=Strict` cookie. Every write must also carry the
 session's CSRF token in an `X-CSRF-Token` header. Five failed logins from one address lock that
 address out for 15 minutes.
@@ -88,7 +88,7 @@ address out for 15 minutes.
 | Variable | Meaning |
 | --- | --- |
 | `SOLODESK_PASSWORD` | The sign-in password, at least 8 characters. Required unless a hash is set. |
-| `SOLODESK_PASSWORD_HASH` | A hash from `python -m solodesk.auth`, used instead of the password. Single-quote it in `.env`. |
+| `SOLODESK_PASSWORD_HASH` | A hash from `.venv/bin/python -m solodesk.auth`, used instead of the password. Single-quote it in `.env`. |
 | `SOLODESK_DATA_DIR` | Folder for the SQLite database. Default `data`. |
 | `SOLODESK_COOKIE_SECURE` | Set to `1` when serving over HTTPS so the cookie is marked `Secure`. |
 | `TZ` | Time zone that decides when "today" starts for timers and due dates. |

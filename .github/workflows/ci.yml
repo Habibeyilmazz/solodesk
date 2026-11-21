@@ -55,6 +55,7 @@ jobs:
         env:
           SOLODESK_PASSWORD: ci-only-password
         run: |
+          docker compose run --rm solodesk python -m solodesk.seed
           docker compose up -d
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:4150/api/health; then
