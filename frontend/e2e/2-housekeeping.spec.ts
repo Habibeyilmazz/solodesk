@@ -151,6 +151,22 @@ test("change settings, fix mistakes and undo things", async ({ page }) => {
   await page.getByRole("link", { name: "Time", exact: true }).click();
   await expect(workshop.getByRole("button", { name: /^Edit/ })).toBeVisible();
 
+  // reissue: copy the void invoice to a new draft (its time line stays behind), then bill the time
+  await page.getByRole("link", { name: "Invoices", exact: true }).click();
+  await page.getByRole("button", { name: /^Void/ }).click();
+  await page.getByRole("row", { name: /Beta Limited/ }).getByRole("link").first().click();
+  await page.getByRole("button", { name: "Copy to new draft" }).click();
+  await expect(page.getByRole("heading", { name: "Draft invoice" })).toBeVisible();
+  await expect(page.getByLabel("Tax %")).toHaveValue("18.5");
+  await expect(page.getByLabel("Line 1 description")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add tracked time" }).click();
+  await dialog.getByRole("button", { name: "Add 2h 30m" }).click();
+  await expect(page.getByLabel("Line 1 quantity")).toHaveValue("2.5");
+  await expect(page.locator(".totals")).toContainText("£194.04");
+  page.once("dialog", (confirm) => confirm.accept());
+  await page.getByRole("button", { name: "Delete draft" }).click();
+  await expect(page.getByRole("heading", { name: "Invoices" })).toBeVisible();
+
   // a client with history cannot be deleted by accident
   await page.getByRole("link", { name: "Clients", exact: true }).click();
   await page.getByRole("button", { name: "Edit client Beta Limited" }).click();

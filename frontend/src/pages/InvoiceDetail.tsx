@@ -48,6 +48,7 @@ function BackLink() {
 
 function IssuedInvoice({ invoice }: { invoice: Invoice }) {
   const { bump } = useRefresh();
+  const navigate = useNavigate();
   const [paidOn, setPaidOn] = useState(isoDate());
   const { busy, error, run } = useAction();
   const money = (minor: number) => formatMoney(minor, invoice.currency);
@@ -68,6 +69,13 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
         body: status === "paid" ? { status, paid_on: paidOn } : { status },
       });
       bump();
+    });
+  }
+
+  function copy() {
+    run(async () => {
+      const draft = await api<Invoice>(`/invoices/${invoice.id}/copy`, { method: "POST" });
+      navigate(`/invoices/${draft.id}`);
     });
   }
 
@@ -150,6 +158,9 @@ function IssuedInvoice({ invoice }: { invoice: Invoice }) {
         <a className="btn" href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noreferrer">
           Open PDF
         </a>
+        <button type="button" className="btn" onClick={copy} disabled={busy}>
+          Copy to new draft
+        </button>
         {invoice.status === "void" ? (
           <span className="muted">Voided: no longer owed. Any tracked time on it can be invoiced again.</span>
         ) : invoice.status === "paid" ? (
