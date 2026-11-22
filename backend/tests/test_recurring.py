@@ -128,16 +128,17 @@ def test_stopping_keeps_the_drafts_already_made(api, acme, app):
 
 
 def test_drafts_missed_while_stopped_are_made_on_start(tmp_path, api, acme, app):
+    now = dt.date.today()  # not TODAY: a run that crosses midnight would disagree with the app
     source = sent_invoice(api, acme)
-    start = TODAY + dt.timedelta(days=1)
+    start = now + dt.timedelta(days=1)
     body = {"invoice_id": source["id"], "every_months": 1, "start_date": start.isoformat()}
     assert api.post("/api/recurring", json=body).status_code == 201
     # pretend the schedule began yesterday, as if the app had been stopped over its day
     with app.state.engine.begin() as conn:
-        conn.exec_driver_sql("UPDATE recurring SET start_date = ?", (TODAY.isoformat(),))
+        conn.exec_driver_sql("UPDATE recurring SET start_date = ?", (now.isoformat(),))
     with TestClient(make_app(app.state.config.db_path)):  # startup runs make_due
         pass
-    assert [d["issue_date"] for d in drafts(api)] == [TODAY.isoformat()]
+    assert [d["issue_date"] for d in drafts(api)] == [now.isoformat()]
 
 
 def test_needs_sign_in(anon):

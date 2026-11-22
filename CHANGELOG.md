@@ -22,6 +22,8 @@ entries) and found nothing worth changing, so no code changed:
   from computed styles); skip link, focus-visible styles, native `<dialog>`, `scope` on headers.
 - Dead code: `ruff` clean, no unused exports, no unused dependencies; the only CSS classes not
   named in the TSX are the `status-*` ones built at run time.
+- One real bug, in a test only: `test_drafts_missed_while_stopped_are_made_on_start` used a date
+  fixed at import, so CI failed when a run crossed midnight UTC. It now reads the date when it runs.
 - Reported gaps re-checked: Toggl real export (cannot be tested without an account), CJK PDF
   glyphs, no homepage, no editing of schedules and no automatic sending are unchanged and are
   features or known limits, not bugs. Not run: Lighthouse itself (not installed; no global installs).
